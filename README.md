@@ -1,6 +1,6 @@
 # Encrypted Fuzzy Delphi
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23927478.svg)](https://doi.org/10.5281/zenodo.23927478)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23928557.svg)](https://doi.org/10.5281/zenodo.23928557)
 
 Expert consensus with **triangular fuzzy numbers** using the **fuzzy Delphi method**, where **nobody can read an individual expert's ballot** — not the server, not the organiser. Only the aggregate result is decrypted, and only when **enough committee members** (2 of 3) agree. Anyone can **recompute and verify** the server's aggregation. Cheating ballots are detected and discarded without revealing their content.
 
