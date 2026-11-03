@@ -4,7 +4,7 @@ title: "Encrypted Fuzzy Delphi: expert consensus on homomorphically encrypted ba
 authors:
   - name: "Tuda"
     email: "ceo@dottheworld.com"
-version: "0.1.0"
+version: "0.2.0"
 date-released: "2026-11-04"
 license: MIT
 repository-code: "https://github.com/tudadada/fuzzy-delphi-fhe"
