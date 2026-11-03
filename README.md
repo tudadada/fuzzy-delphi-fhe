@@ -1,113 +1,103 @@
-# Delphi mờ trên dữ liệu mã hóa đồng cấu (Encrypted Fuzzy Delphi)
+# Encrypted Fuzzy Delphi
 
-Lấy ý kiến chuyên gia bằng **số mờ tam giác** theo phương pháp **Delphi mờ**, trong đó **không ai đọc được phiếu của từng người** — kể cả máy chủ và người tổ chức. Chỉ kết quả chung được giải mã, và chỉ khi **đủ cả hội đồng** cùng đồng ý. Phiếu gian bị phát hiện và loại bỏ mà không lộ nội dung.
+Expert consensus with **triangular fuzzy numbers** using the **fuzzy Delphi method**, where **nobody can read an individual expert's ballot** — not the server, not the organiser. Only the aggregate result is decrypted, and only when **the whole committee** agrees. Cheating ballots are detected and discarded without revealing their content.
 
-> **Trạng thái:** bản chứng minh khái niệm (proof of concept). Dữ liệu giả lập, chưa được chuyên gia mật mã thẩm định, chưa thử với hội đồng thật. Rất mong nhận góp ý và chỉ ra lỗ hổng.
+> **Status:** proof of concept. Simulated data, not yet reviewed by cryptographers, not yet tested with a real panel. Feedback and vulnerability reports are very welcome.
 
-*English summary at the bottom.*
+🇻🇳 [Bản tiếng Việt](README.vi.md)
 
 ---
 
-## Bài toán
+## The problem
 
-Khi lấy ý kiến chuyên gia (quy hoạch, y tế, chấm thi, đánh giá dự án), người tham gia thường **nói theo số đông hoặc theo cấp trên**, hoặc ngại nói thật vì sợ lộ danh tính. Phiếu "ẩn danh" thông thường vẫn bị người tổng hợp đọc được.
+When experts are consulted (planning, healthcare, competition judging, project evaluation), participants often **follow the majority or their superiors**, or hold back for fear of being identified. Conventional "anonymous" ballots can still be read by whoever compiles them.
 
-Phương pháp **Delphi mờ** cho phép chuyên gia trả lời bằng thang ngôn ngữ (rất thấp → rất cao), mỗi mức ứng với một **số mờ tam giác** (a, b, c). Các phép tính cốt lõi của Delphi mờ — trung bình mờ, giải mờ theo trọng tâm, khoảng cách đồng thuận — chỉ gồm **cộng, nhân với hằng số và bình phương**. Đây đúng là nhóm phép tính mà **mã hóa đồng cấu hoàn toàn (FHE)** làm rẻ nhất.
+The **fuzzy Delphi method** lets experts answer on a linguistic scale (very low → very high), each level mapped to a **triangular fuzzy number** (a, b, c). Its core computations — fuzzy mean, centroid defuzzification, consensus distance — use only **addition, multiplication by constants and squaring**. These are exactly the operations that **fully homomorphic encryption (FHE)** handles most cheaply.
 
-## Hệ thống làm gì
+## What the system does
 
-| Vai | Việc |
+| Role | Task |
 |---|---|
-| **Chuyên gia** | Đánh dấu 1 trong 5 mức cho từng tiêu chí. Phiếu được **mã hóa trên máy của họ** trước khi gửi. |
-| **Máy chủ** | Chỉ nhận bản mã. Kiểm tra phiếu hợp lệ, đổi phiếu thành số mờ, tính trung bình mờ, điểm giải mờ và độ lệch — **toàn bộ trên bản mã**. |
-| **Hội đồng (3 người)** | Mỗi người giữ một mảnh khóa. **Phải đủ cả 3** mới giải mã được kết quả. Một người tự giải mã chỉ thu được dữ liệu vô nghĩa. |
+| **Expert** | Marks one of 5 levels per criterion. The ballot is **encrypted on their own device** before it is sent. |
+| **Server** | Receives ciphertexts only. Validates ballots, maps them to fuzzy numbers, computes fuzzy means, defuzzified scores and per-expert distances — **entirely on ciphertexts**. |
+| **Committee (3 members)** | Each holds one key share. **All 3 are required** to decrypt the result. A single member decrypting alone obtains meaningless data. |
 
-**Chống phiếu gian:** chuyên gia gửi phiếu dạng "chọn 1 trong 5 ô" (0/1). Trên bản mã, máy chủ kiểm tra (1) tổng các ô bằng 1 và (2) mỗi ô thỏa x(x−1) = 0. Kết quả được nhân với số ngẫu nhiên: phiếu hợp lệ giải mã ra 0, phiếu gian ra số ngẫu nhiên — hội đồng biết phiếu nào gian nhưng không biết nội dung. Vì máy chủ tự đổi ô sang số mờ, điều kiện a ≤ b ≤ c luôn được bảo đảm.
+**Ballot validation:** experts submit a one-hot "pick 1 of 5" ballot (0/1). On the ciphertext, the server checks (1) the levels sum to 1 and (2) each entry satisfies x(x−1) = 0. The check is multiplied by random values: a valid ballot decrypts to 0, an invalid one to random noise — the committee learns which ballot is invalid but not what it contains. Since the server maps levels to fuzzy numbers itself, a ≤ b ≤ c is guaranteed by construction.
 
-Quy tắc Delphi mờ dùng theo Chen (2000) và Cheng & Lin (2002): đồng thuận khi khoảng cách d ≤ 0,2 với tỷ lệ ≥ 75% chuyên gia; giữ tiêu chí khi điểm giải mờ ≥ 0,5.
+Fuzzy Delphi rules follow Chen (2000) and Cheng & Lin (2002): consensus when distance d ≤ 0.2 for ≥ 75% of experts; a criterion is kept when its defuzzified score ≥ 0.5.
 
-## Kết quả đo (bản cuối: `delphi/04_packed_final.py`)
+## Measured results (final version: `delphi/04_packed_final.py`)
 
-OpenFHE, BFV, độ sâu nhân 2, N = 8192, giải mã ngưỡng 3 bên. Một máy chủ đám mây thông thường, không GPU.
+OpenFHE, BFV, multiplicative depth 2, N = 8192, 3-party threshold decryption. A standard cloud machine, no GPU.
 
-| Chuyên gia × Tiêu chí | Mỗi người gửi | Mã hóa | Kiểm phiếu | Gộp kết quả | Bắt phiếu gian | Khớp bản rõ |
+| Experts × Criteria | Upload per expert | Encryption | Validation | Aggregation | Cheaters caught | Matches plaintext |
 |---|---|---|---|---|---|---|
-| 15 × 20 | 385 KB | 6,5 ms | 0,6 s | 0,9 s | 2/2 | 100% |
-| 50 × 100 | 385 KB | 6,4 ms | 2,1 s | 3,3 s | 2/2 | 100% |
-| 50 × 800 | 385 KB | 9,7 ms | 2,4 s | 3,1 s | 2/2 | 100% |
+| 15 × 20 | 385 KB | 6.5 ms | 0.6 s | 0.9 s | 2/2 | 100% |
+| 50 × 100 | 385 KB | 6.4 ms | 2.1 s | 3.3 s | 2/2 | 100% |
+| 50 × 800 | 385 KB | 9.7 ms | 2.4 s | 3.1 s | 2/2 | 100% |
 
-- Kiểm tra lặp với 3 bộ dữ liệu khác nhau: 3/3 đạt. Không có phiếu gian thì không báo nhầm.
-- Hai kiểu phiếu gian đã thử: dồn 50 phiếu vào một ô; chọn cùng lúc hai mức.
-- Kết quả là **chính xác tuyệt đối** (số nguyên), không phải xấp xỉ.
+- Repeated with 3 different datasets: 3/3 passed. No false positives when there are no cheaters.
+- Two cheating strategies tested: stuffing 50 votes into one level; selecting two levels at once.
+- Results are **exact** (integer arithmetic), not approximate.
 
-### Quá trình tối ưu
+### Optimisation path
 
-| Phiên bản | Cách làm | Mỗi người gửi | Khóa tính toán | Ghi chú |
+| Version | Approach | Upload per expert | Evaluation keys | Notes |
 |---|---|---|---|---|
-| `01_ckks_baseline.py` | CKKS số thực, khóa xoay | 836 KB | ~117 MB | xấp xỉ, máy chủ ~10 s |
-| `02_bfv_integer.py` | BFV số nguyên, tách a/b/c, bỏ khóa xoay | 259 KB | ~0,4 MB | chính xác, chưa có ngưỡng, chưa chống gian |
-| `03_threshold_anticheat.py` | + giải mã ngưỡng + chống phiếu gian | 1.925 KB | — | 5 bản mã/người |
-| `04_packed_final.py` | Dồn 5 mức vào 1 bản mã | **385 KB** | — | bản cuối |
+| `01_ckks_baseline.py` | CKKS reals, rotation keys | 836 KB | ~117 MB | approximate, server ~10 s |
+| `02_bfv_integer.py` | BFV integers, split a/b/c, no rotation keys | 259 KB | ~0.4 MB | exact; no threshold, no validation |
+| `03_threshold_anticheat.py` | + threshold decryption + ballot validation | 1,925 KB | — | 5 ciphertexts per expert |
+| `04_packed_final.py` | Pack all 5 levels into 1 ciphertext | **385 KB** | — | final version |
 
-Đã thử nén bản mã (zlib, lzma): không giảm được (385 → 382 KB), đúng như lý thuyết vì bản mã có tính ngẫu nhiên cao.
+Compressing ciphertexts (zlib, lzma) gave no reduction (385 → 382 KB), as expected for high-entropy data.
 
-## Giới hạn đã biết
+## Known limitations
 
-1. **Máy chủ được giả định trung thực nhưng tò mò** (semi-honest). Máy chủ cố tình bỏ phiếu hoặc tính sai thì hệ thống chưa phát hiện được.
-2. Hội đồng biết **ai nộp phiếu gian** và **mỗi người lệch khỏi số đông bao nhiêu** (không biết nội dung phiếu).
-3. Giải mã ngưỡng hiện là **3 trên 3** (thiếu một người là không mở được). Chưa làm dạng t-trên-n.
-4. Chưa bảo vệ trước việc chuyên gia gửi **bản mã được chế tạo sai cấu trúc** (không phải bản mã mã hóa đúng cách).
-5. Dữ liệu giả lập; chưa có đánh giá bảo mật độc lập.
+1. The server is assumed **honest-but-curious** (semi-honest). A server that drops ballots or computes incorrectly is not detected.
+2. The committee learns **who submitted an invalid ballot** and **how far each expert is from the consensus** (but not ballot contents).
+3. Threshold decryption is currently **3-of-3** (one missing member blocks decryption). t-of-n is not implemented.
+4. No protection yet against experts submitting **maliciously crafted ciphertexts** (not honestly generated encryptions).
+5. Simulated data; no independent security review.
 
-## Đã có ai làm chưa?
+## Prior work
 
-Tra cứu (tháng 11/2026) **chưa tìm thấy** công trình làm Delphi mờ trên dữ liệu mã hóa đồng cấu. Các thành phần riêng lẻ thì đã có:
+A search (November 2026) found **no prior work** on fuzzy Delphi over homomorphically encrypted data. The individual building blocks are well known:
 
-- **Kiểm tra dữ liệu gửi lên hợp lệ mà không lộ nội dung** cho thống kê tổng hợp: hệ thống **Prio** (Corrigan-Gibbs & Boneh, NSDI 2017) — dùng chia sẻ bí mật thay vì FHE.
-- **Cộng bảo mật nhiều bên**, bỏ phiếu điện tử: có từ lâu.
-- **Giải mã ngưỡng, đóng gói SIMD**: tính năng chuẩn của OpenFHE.
+- **Validating client submissions without revealing them** for aggregate statistics: **Prio** (Corrigan-Gibbs & Boneh, NSDI 2017) — using secret sharing rather than FHE.
+- **Secure multi-party summation**, electronic voting: long established.
+- **Threshold decryption, SIMD packing**: standard OpenFHE features.
 
-Đóng góp ở đây là **ghép các thành phần trên thành một quy trình Delphi mờ hoàn chỉnh chạy được**, kèm số đo. Đây là đóng góp về ứng dụng và hệ thống, không phải kỹ thuật mật mã mới. **Nếu bạn biết công trình tương tự, xin mở issue để chỉ ra.**
+The contribution here is **assembling these into a complete, working fuzzy Delphi pipeline**, with measurements. It is an application and systems contribution, not a new cryptographic technique. **If you know of related work, please open an issue.**
 
-## Thư mục `exploration/` — các hướng đã thử trước đó (kể cả thất bại)
+## `exploration/` — earlier attempts (including negative results)
 
-Trước khi đến Delphi mờ, dự án thử áp dụng logic mờ để làm FHE nhẹ hơn trong **chấm điểm tín dụng** (dữ liệu German Credit, UCI).
+Before fuzzy Delphi, the project tried using fuzzy logic to make FHE lighter for **credit scoring** (German Credit dataset, UCI).
 
-| Thí nghiệm | Kết luận |
+| Experiment | Finding |
 |---|---|
-| `credit_01`: luật mờ 8 mức (BFV) vs số chính xác (CKKS) | Nhẹ hơn ~90% so với CKKS kèm sigmoid, nhưng chỉ ~62% so với thiết kế CKKS tối giản. Phần lớn lợi ích đến từ việc bỏ sigmoid, không phải từ "mờ". |
-| `credit_02`: độ thuộc mờ tam giác vs chia mức cứng | AUC 0,767 vs 0,766 — chênh lệch nằm trong nhiễu. **Không có ích.** |
-| `credit_03`: đóng gói nhiều hồ sơ vào một bản mã | Nhỏ hơn 51 lần, nhanh hơn ~220 lần, kết quả khớp 100%. Đây là kỹ thuật chuẩn (SIMD batching), **không mới**. |
+| `credit_01`: 8-level fuzzy rules (BFV) vs exact model (CKKS) | ~90% smaller than CKKS with sigmoid, but only ~62% smaller than a minimal CKKS design. Most of the gain comes from dropping the sigmoid, not from "fuzziness". |
+| `credit_02`: triangular soft membership vs hard binning | AUC 0.767 vs 0.766 — within noise. **No benefit.** |
+| `credit_03`: packing many records into one ciphertext | 51× smaller, ~220× faster, 100% matching results. This is standard SIMD batching, **not new**. |
 
-Bài học: ghép "logic mờ + FHE" một cách chung chung không tạo ra gì mới. Kết quả có giá trị xuất hiện khi chọn bài toán **vốn dĩ đã dùng số mờ** (Delphi mờ).
+Lesson: combining "fuzzy logic + FHE" generically produces nothing new. A valuable result appeared only when choosing a problem that **already uses fuzzy numbers natively** (fuzzy Delphi).
 
-Để chạy, tải dữ liệu vào `exploration/german.data`:
+To run, download the data into `exploration/german.data`:
 ```bash
 curl -L -o exploration/german.data https://raw.githubusercontent.com/selva86/datasets/master/GermanCredit.csv
 ```
 
-## Cài đặt và chạy
+## Installation and usage
 
 ```bash
-pip install -r requirements.txt          # Python 3.12 cho OpenFHE
-python delphi/04_packed_final.py          # bản cuối
-python delphi/02_bfv_integer.py           # bản BFV đơn giản (TenSEAL)
+pip install -r requirements.txt          # Python 3.12 for OpenFHE
+python delphi/04_packed_final.py          # final version
+python delphi/02_bfv_integer.py           # simple BFV version (TenSEAL)
 ```
 
-## Minh bạch về cách làm
+## How this was made
 
-Ý tưởng, định hướng và các lựa chọn bài toán do **Tuda** (ceo@dottheworld.com) đưa ra. Mã nguồn được viết và chạy với sự hỗ trợ của trợ lý AI (Claude, Anthropic). Mọi số liệu trong README là kết quả chạy thật của mã trong kho này.
+The idea, direction and problem choices are by **Tuda** (ceo@dottheworld.com). The code was written and run with the help of an AI assistant (Claude, Anthropic). Every figure in this README is the actual output of the code in this repository.
 
-## Giấy phép
+## License
 
-MIT — xem `LICENSE`.
-
----
-
-## English summary
-
-**Encrypted Fuzzy Delphi** runs the fuzzy Delphi expert-consensus method on homomorphically encrypted ballots (OpenFHE, BFV). Experts submit one-hot linguistic ratings encrypted on their own device; the server validates ballots, maps them to triangular fuzzy numbers, and computes fuzzy means, centroid defuzzification and per-expert consensus distances entirely on ciphertexts. Results are revealed only through 3-of-3 threshold decryption. Malformed ballots are detected via randomized validity checks (sum = 1, x(x−1) = 0) without revealing their content.
-
-Final version: **385 KB per expert**, < 10 ms encryption, a few seconds of server time for 50 experts × 800 criteria, exact results matching plaintext, 2/2 cheating ballots caught, no false positives.
-
-This is a proof of concept with simulated data and a semi-honest server model; it has not been independently reviewed. We found no prior work on fuzzy Delphi over FHE, but the building blocks (Prio-style validity checks, secure aggregation, threshold FHE, SIMD packing) are well known — **if you know related work, please open an issue.** The `exploration/` folder documents earlier attempts, including negative results.
+MIT — see `LICENSE`.
