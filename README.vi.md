@@ -121,6 +121,10 @@ OpenFHE, BFV, độ sâu nhân 2, N = 8192, giải mã ngưỡng 3 bên. Một m
 
 Đã thử nén bản mã (zlib, lzma): không giảm được (385 → 382 KB), đúng như lý thuyết vì bản mã có tính ngẫu nhiên cao.
 
+## Phân tích an toàn
+
+Xem **[SECURITY.vi.md](SECURITY.vi.md)**: mô hình đe dọa, chứng minh bước kiểm phiếu là đúng đắn (Định lý 1, kèm cận chống thử lại) và kiểm chứng được trước máy chủ gian lận (Định lý 2), phác thảo chứng minh có điều kiện cho tính giữ kín phiếu, và danh sách các khoảng trống còn mở. **Quan trọng:** tính giữ kín phiếu đòi hỏi bật chế độ `NOISE_FLOODING_MULTIPARTY` của OpenFHE, vốn không phải mặc định (chi phí đo trong `delphi/08_noise_flooding_check.py`).
+
 ## Giới hạn đã biết
 
 1. ~~Máy chủ bỏ phiếu hoặc tính sai thì không phát hiện được.~~ **Đã xử lý ở v0.2** bằng biên nhận và tính lại công khai; bước kiểm phiếu trở nên kiểm chứng công khai được ở **v0.3**.

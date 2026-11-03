@@ -121,6 +121,10 @@ OpenFHE, BFV, multiplicative depth 2, N = 8192, 3-party threshold decryption. A 
 
 Compressing ciphertexts (zlib, lzma) gave no reduction (385 → 382 KB), as expected for high-entropy data.
 
+## Security analysis
+
+See **[SECURITY.md](SECURITY.md)**: threat model, proofs of ballot-validation soundness (Theorem 1, with a grinding bound) and verifiability against a cheating server (Theorem 2), a conditional proof sketch for ballot privacy, and the list of open gaps. **Important:** ballot privacy requires enabling OpenFHE's `NOISE_FLOODING_MULTIPARTY` mode, which is not the default (cost measured in `delphi/08_noise_flooding_check.py`).
+
 ## Known limitations
 
 1. ~~Server dropping ballots or computing incorrectly is not detected.~~ **Addressed in v0.2** via receipts and public recomputation; the validity check became publicly verifiable in **v0.3**.
