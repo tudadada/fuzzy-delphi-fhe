@@ -4,7 +4,7 @@
 
 Expert consensus with **triangular fuzzy numbers** using the **fuzzy Delphi method**, where **nobody can read an individual expert's ballot** — not the server, not the organiser. Only the aggregate result is decrypted, and only when **enough committee members** (2 of 3) agree. Anyone can **recompute and verify** the server's aggregation. Cheating ballots are detected and discarded without revealing their content.
 
-> **Status:** proof of concept (v0.2). Simulated data, not yet reviewed by cryptographers, not yet tested with a real panel. Feedback and vulnerability reports are very welcome.
+> **Status:** proof of concept (v0.3). Simulated data, not yet reviewed by cryptographers, not yet tested with a real panel. Feedback and vulnerability reports are very welcome.
 
 🇻🇳 [Bản tiếng Việt](README.vi.md)
 
@@ -29,6 +29,30 @@ The **fuzzy Delphi method** lets experts answer on a linguistic scale (very low 
 
 Fuzzy Delphi rules follow Chen (2000) and Cheng & Lin (2002): consensus when distance d ≤ 0.2 for ≥ 75% of experts; a criterion is kept when its defuzzified score ≥ 0.5.
 
+> ⚠️ **Security notice (v0.1–v0.2):** the ballot-validity check in `03`, `04` and `05` is **flawed**. It summed x(x−1) over the 5 levels before masking, so a non-one-hot ballot such as (2, b, c, 0, 0) with b + c = −1 and bc = 2 (mod p) passes the check. In tests this distorted the fuzzy mean by over 1,000× on a 0–1 scale. **Fixed in v0.3 (`07_public_validity.py`). Do not use earlier versions.**
+
+## What's new in v0.3 (`delphi/07_public_validity.py`)
+
+1. **Fixed the validity-check flaw.** Each slot's x(x−1) is now masked by its own random value *before* summing, so every entry must satisfy x ∈ {0, 1}.
+2. **Publicly verifiable ballot validation (Fiat–Shamir).** The masks are no longer secret values chosen by the server. They are derived from the SHA-256 of the entire bulletin board, **only after all ballots are locked**. Anyone can recompute the validity check; a cheater cannot know the masks in advance.
+3. **Protection against grinding.** With p ≈ 786,433 a single check has a ~1/786,433 chance of being fooled, and the last submitter could re-encrypt millions of times until lucky. The check is repeated with **3 independent mask sets**, reducing this to ~10⁻¹⁸.
+
+| Test (20 × 30 and 50 × 100, 2-of-3 decryption) | Result |
+|---|---|
+| Old check (v0.2): non-one-hot ballot passes | **Yes — vulnerability confirmed** |
+| v0.3 catches all 3 cheating ballots (incl. the exploit) | ✓ |
+| No false positives | ✓ |
+| Auditor recomputes validity checks, hashes match | ✓ |
+| Server falsely flags a valid ballot (edits its claim) | caught ✓ |
+| Server swaps in another ballot's check ciphertext | caught ✓ |
+| Cheater who **knows masks in advance** can craft a passing ballot | yes — which is why masks must come from the locked board |
+| Same crafted ballot with board-derived masks | caught ✓ |
+| Aggregate matches plaintext | ✓ |
+
+Validation time (3 repetitions): 4.2 s for 20 × 30, 10.5 s for 50 × 100.
+
+**Trade-off:** with public masks, the committee can infer the content of an **invalid** ballot (values are small, so they can be brute-forced). Valid ballots reveal nothing — their check is always 0. A cheater loses ballot privacy.
+
 ## What's new in v0.2 (`delphi/05_verifiable_tofn.py`)
 
 Changes made in response to external review:
@@ -46,7 +70,7 @@ Changes made in response to external review:
 
 Total time covers validation, aggregation and all threshold decryptions (including key recovery for the absent member).
 
-**Not covered by public verification:** the ballot-validity check uses secret random masks, so it cannot be publicly recomputed. A server could wrongly mark a valid ballot as invalid; the affected expert would see their ballot listed as excluded and could dispute it, but cannot prove validity without revealing it.
+**Not covered by public verification in v0.2:** the ballot-validity check used secret random masks. **Addressed in v0.3.**
 
 ## Comparison with secret sharing (`delphi/06_baseline_secret_sharing.py`)
 
@@ -92,13 +116,14 @@ OpenFHE, BFV, multiplicative depth 2, N = 8192, 3-party threshold decryption. A 
 | `02_bfv_integer.py` | BFV integers, split a/b/c, no rotation keys | 259 KB | ~0.4 MB | exact; no threshold, no validation |
 | `03_threshold_anticheat.py` | + threshold decryption + ballot validation | 1,925 KB | — | 5 ciphertexts per expert |
 | `04_packed_final.py` | Pack all 5 levels into 1 ciphertext | **385 KB** | — | v0.1 |
-| `05_verifiable_tofn.py` | + 2-of-3 threshold, public verification, shuffling | **385 KB** | — | **v0.2 (current)** |
+| `05_verifiable_tofn.py` | + 2-of-3 threshold, public verification, shuffling | **385 KB** | — | v0.2 (flawed validity check) |
+| `07_public_validity.py` | + fixed validity check, public masks, 3 repetitions | **385 KB** | — | **v0.3 (current)** |
 
 Compressing ciphertexts (zlib, lzma) gave no reduction (385 → 382 KB), as expected for high-entropy data.
 
 ## Known limitations
 
-1. ~~Server dropping ballots or computing incorrectly is not detected.~~ **Addressed in v0.2** via receipts and public recomputation — except the ballot-validity check (see above).
+1. ~~Server dropping ballots or computing incorrectly is not detected.~~ **Addressed in v0.2** via receipts and public recomputation; the validity check became publicly verifiable in **v0.3**.
 2. The committee learns **which submission was invalid**. ~~It also learns each expert's distance from consensus~~ — v0.2 shuffles distances, but this only holds if the server does not collude with the committee.
 3. ~~Only 3-of-3.~~ **v0.2 supports 2-of-3.** Larger t-of-n configurations are untested. Any 2 colluding members can decrypt individual ballots — this is inherent to a 2-of-3 threshold.
 4. No protection yet against experts submitting **maliciously crafted ciphertexts** (not honestly generated encryptions). This would require zero-knowledge proofs of correct encryption — open work.
@@ -136,7 +161,8 @@ curl -L -o exploration/german.data https://raw.githubusercontent.com/selva86/dat
 
 ```bash
 pip install -r requirements.txt          # Python 3.12 for OpenFHE
-python delphi/05_verifiable_tofn.py       # current version (v0.2)
+python delphi/07_public_validity.py       # current version (v0.3)
+python delphi/05_verifiable_tofn.py       # v0.2
 python delphi/06_baseline_secret_sharing.py   # secret-sharing comparison
 python delphi/04_packed_final.py          # v0.1
 python delphi/02_bfv_integer.py           # simple BFV version (TenSEAL)

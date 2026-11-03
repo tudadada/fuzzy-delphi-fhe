@@ -4,7 +4,7 @@
 
 Lấy ý kiến chuyên gia bằng **số mờ tam giác** theo phương pháp **Delphi mờ**, trong đó **không ai đọc được phiếu của từng người** — kể cả máy chủ và người tổ chức. Chỉ kết quả chung được giải mã, và chỉ khi **đủ số thành viên hội đồng** (2 trên 3) cùng đồng ý. Bất kỳ ai cũng **tính lại và kiểm chứng** được phép gộp của máy chủ. Phiếu gian bị phát hiện và loại bỏ mà không lộ nội dung.
 
-> **Trạng thái:** bản chứng minh khái niệm (proof of concept), phiên bản v0.2. Dữ liệu giả lập, chưa được chuyên gia mật mã thẩm định, chưa thử với hội đồng thật. Rất mong nhận góp ý và chỉ ra lỗ hổng.
+> **Trạng thái:** bản chứng minh khái niệm (proof of concept), phiên bản v0.3. Dữ liệu giả lập, chưa được chuyên gia mật mã thẩm định, chưa thử với hội đồng thật. Rất mong nhận góp ý và chỉ ra lỗ hổng.
 
 🇬🇧 [English version](README.md)
 
@@ -29,6 +29,30 @@ Phương pháp **Delphi mờ** cho phép chuyên gia trả lời bằng thang ng
 
 Quy tắc Delphi mờ dùng theo Chen (2000) và Cheng & Lin (2002): đồng thuận khi khoảng cách d ≤ 0,2 với tỷ lệ ≥ 75% chuyên gia; giữ tiêu chí khi điểm giải mờ ≥ 0,5.
 
+> ⚠️ **Thông báo bảo mật (v0.1–v0.2):** bước kiểm tra phiếu hợp lệ trong `03`, `04` và `05` **có lỗ hổng**. Nó cộng gộp x(x−1) của 5 mức trước khi che ngẫu nhiên, nên một phiếu không phải một-ô như (2, b, c, 0, 0) với b + c = −1 và bc = 2 (mod p) vẫn lọt qua. Khi thử, phiếu này làm trung bình mờ sai hơn 1.000 lần trên thang 0–1. **Đã sửa ở v0.3 (`07_public_validity.py`). Không dùng các phiên bản cũ.**
+
+## Điểm mới trong v0.3 (`delphi/07_public_validity.py`)
+
+1. **Vá lỗ hổng kiểm phiếu.** Giá trị x(x−1) của **từng ô** được che bằng một số ngẫu nhiên riêng *trước khi* cộng, nên mọi ô đều phải là 0 hoặc 1.
+2. **Kiểm phiếu kiểm chứng công khai được (Fiat–Shamir).** Số che không còn là bí mật do máy chủ chọn. Chúng được sinh từ mã băm SHA-256 của toàn bộ bảng tin, **chỉ sau khi mọi phiếu đã được khóa**. Ai cũng tính lại được bước kiểm phiếu; kẻ gian không thể biết trước số che.
+3. **Chống "thử đi thử lại".** Với p ≈ 786.433, một lần kiểm có xác suất bị lừa khoảng 1/786.433, và người nộp cuối có thể mã hóa lại hàng triệu lần cho tới khi trúng. Bước kiểm được lặp **3 lần với 3 bộ số che độc lập**, đưa xác suất này xuống khoảng 10⁻¹⁸.
+
+| Phép thử (20 × 30 và 50 × 100, giải mã 2/3) | Kết quả |
+|---|---|
+| Kiểm tra cũ (v0.2): phiếu không phải một-ô lọt qua | **Có — lỗ hổng được xác nhận** |
+| v0.3 bắt cả 3 phiếu gian (gồm phiếu khai thác lỗ hổng) | ✓ |
+| Không báo nhầm | ✓ |
+| Kiểm toán viên tính lại bước kiểm phiếu, mã băm khớp | ✓ |
+| Máy chủ vu oan một phiếu hợp lệ (sửa lời tuyên bố) | bị bắt ✓ |
+| Máy chủ tráo bản mã kiểm tra của phiếu khác vào | bị bắt ✓ |
+| Kẻ gian **biết trước số che** chế được phiếu lọt qua | có — vì vậy số che phải sinh từ bảng tin đã khóa |
+| Cùng phiếu chế đó, khi số che sinh từ bảng tin | bị bắt ✓ |
+| Kết quả gộp khớp bản rõ | ✓ |
+
+Thời gian kiểm phiếu (lặp 3 lần): 4,2 giây với 20 × 30, 10,5 giây với 50 × 100.
+
+**Đánh đổi:** khi số che công khai, hội đồng có thể suy ra nội dung của phiếu **gian** (các giá trị nhỏ nên thử hết được). Phiếu hợp lệ không lộ gì, vì kết quả kiểm tra của nó luôn bằng 0. Ai gian lận thì mất quyền giữ kín phiếu.
+
 ## Điểm mới trong v0.2 (`delphi/05_verifiable_tofn.py`)
 
 Các thay đổi theo góp ý đánh giá độc lập:
@@ -46,7 +70,7 @@ Các thay đổi theo góp ý đánh giá độc lập:
 
 Tổng thời gian gồm kiểm phiếu, gộp kết quả và mọi lần giải mã ngưỡng (kể cả khôi phục khóa cho người vắng).
 
-**Phần chưa kiểm chứng công khai được:** bước kiểm tra phiếu hợp lệ dùng số che ngẫu nhiên bí mật, nên không tính lại công khai được. Máy chủ có thể đánh dấu sai một phiếu hợp lệ là phiếu gian. Chuyên gia bị ảnh hưởng sẽ thấy phiếu mình bị loại và có thể khiếu nại, nhưng không chứng minh được phiếu hợp lệ mà không để lộ nội dung.
+**Phần chưa kiểm chứng công khai được ở v0.2:** bước kiểm tra phiếu hợp lệ dùng số che bí mật. **Đã xử lý ở v0.3.**
 
 ## So sánh với chia sẻ bí mật (`delphi/06_baseline_secret_sharing.py`)
 
@@ -92,13 +116,14 @@ OpenFHE, BFV, độ sâu nhân 2, N = 8192, giải mã ngưỡng 3 bên. Một m
 | `02_bfv_integer.py` | BFV số nguyên, tách a/b/c, bỏ khóa xoay | 259 KB | ~0,4 MB | chính xác, chưa có ngưỡng, chưa chống gian |
 | `03_threshold_anticheat.py` | + giải mã ngưỡng + chống phiếu gian | 1.925 KB | — | 5 bản mã/người |
 | `04_packed_final.py` | Dồn 5 mức vào 1 bản mã | **385 KB** | — | v0.1 |
-| `05_verifiable_tofn.py` | + ngưỡng 2/3, kiểm chứng công khai, xáo trộn | **385 KB** | — | **v0.2 (hiện tại)** |
+| `05_verifiable_tofn.py` | + ngưỡng 2/3, kiểm chứng công khai, xáo trộn | **385 KB** | — | v0.2 (kiểm phiếu có lỗ hổng) |
+| `07_public_validity.py` | + vá kiểm phiếu, số che công khai, lặp 3 lần | **385 KB** | — | **v0.3 (hiện tại)** |
 
 Đã thử nén bản mã (zlib, lzma): không giảm được (385 → 382 KB), đúng như lý thuyết vì bản mã có tính ngẫu nhiên cao.
 
 ## Giới hạn đã biết
 
-1. ~~Máy chủ bỏ phiếu hoặc tính sai thì không phát hiện được.~~ **Đã xử lý ở v0.2** bằng biên nhận và tính lại công khai, trừ bước kiểm tra phiếu hợp lệ (xem phía trên).
+1. ~~Máy chủ bỏ phiếu hoặc tính sai thì không phát hiện được.~~ **Đã xử lý ở v0.2** bằng biên nhận và tính lại công khai; bước kiểm phiếu trở nên kiểm chứng công khai được ở **v0.3**.
 2. Hội đồng biết **phiếu nộp nào là phiếu gian**. ~~Hội đồng còn biết độ lệch của từng người~~: v0.2 đã xáo trộn độ lệch, nhưng chỉ có tác dụng khi máy chủ không thông đồng với hội đồng.
 3. ~~Chỉ có 3 trên 3.~~ **v0.2 hỗ trợ 2 trên 3.** Các cấu hình t-trên-n lớn hơn chưa được thử. Bất kỳ 2 thành viên nào thông đồng đều giải mã được phiếu riêng lẻ, đây là bản chất của ngưỡng 2 trên 3.
 4. Chưa bảo vệ trước việc chuyên gia gửi **bản mã được chế tạo sai cấu trúc** (không phải bản mã mã hóa đúng cách). Cần chứng minh không tiết lộ (zero-knowledge) rằng bản mã được tạo đúng, đây là việc còn bỏ ngỏ.
@@ -136,7 +161,8 @@ curl -L -o exploration/german.data https://raw.githubusercontent.com/selva86/dat
 
 ```bash
 pip install -r requirements.txt          # Python 3.12 cho OpenFHE
-python delphi/05_verifiable_tofn.py       # phiên bản hiện tại (v0.2)
+python delphi/07_public_validity.py       # phiên bản hiện tại (v0.3)
+python delphi/05_verifiable_tofn.py       # v0.2
 python delphi/06_baseline_secret_sharing.py   # đối chứng chia sẻ bí mật
 python delphi/04_packed_final.py          # v0.1
 python delphi/02_bfv_integer.py           # bản BFV đơn giản (TenSEAL)
