@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Encrypted Fuzzy Delphi: expert consensus on homomorphically encrypted ballots"
+authors:
+  - name: "Tuda"
+    email: "ceo@dottheworld.com"
+version: "0.1.0"
+date-released: "2026-11-04"
+license: MIT
+repository-code: "https://github.com/tudadada/fuzzy-delphi-fhe"
+keywords:
+  - fully homomorphic encryption
+  - fuzzy Delphi
+  - threshold decryption
+  - OpenFHE

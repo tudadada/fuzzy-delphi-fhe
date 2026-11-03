@@ -1,0 +1,11 @@
+{
+  "title": "Encrypted Fuzzy Delphi: expert consensus on homomorphically encrypted ballots",
+  "description": "Proof of concept running the fuzzy Delphi expert-consensus method on homomorphically encrypted ballots (OpenFHE, BFV). Experts encrypt one-hot linguistic ratings on their own device; the server validates ballots, maps them to triangular fuzzy numbers, and computes fuzzy means, centroid defuzzification and consensus distances entirely on ciphertexts. Results are revealed only via 3-of-3 threshold decryption. Malformed ballots are detected without revealing their content. Final version: 385 KB per expert, exact results. Simulated data; semi-honest server model; not independently reviewed. Includes negative results from earlier fuzzy-logic/FHE credit-scoring experiments.",
+  "upload_type": "software",
+  "creators": [{"name": "Tuda"}],
+  "keywords": ["fully homomorphic encryption", "FHE", "fuzzy Delphi", "triangular fuzzy numbers", "threshold decryption", "OpenFHE", "privacy-preserving", "expert consensus"],
+  "license": "MIT",
+  "access_right": "open",
+  "language": "eng",
+  "notes": "Code written with the assistance of an AI assistant (Claude, Anthropic)."
+}
