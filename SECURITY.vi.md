@@ -1,4 +1,4 @@
-# Phân tích an toàn — Encrypted Fuzzy Delphi (v0.3)
+# Phân tích an toàn — Encrypted Fuzzy Delphi (v0.3–v0.4)
 
 🇬🇧 [English version](SECURITY.md)
 
@@ -104,7 +104,7 @@ Mỗi chuyên gia giữ biên nhận h_i = H(ct_i). Máy chủ công bố BB, da
 | FIXED_NOISE (mặc định, dùng trong v0.3) | 8.192 | 385 KB | 8,9–10,3 s | ✓ |
 | NOISE_FLOODING | 16.384 | 1.281 KB | 32,5–41,2 s | ✓ |
 
-**Khuyến nghị: dùng `NOISE_FLOODING_MULTIPARTY` khi triển khai thật.** Cho tới khi đó, tuyên bố về giữ kín phiếu cần được hiểu là *có điều kiện: phải bật phủ nhiễu*.
+**Đã xử lý ở v0.4:** `NOISE_FLOODING_MULTIPARTY` là mặc định trong `delphi/09_hardened.py`. Với v0.3 trở về trước, tuyên bố về giữ kín phiếu là *có điều kiện: phải bật phủ nhiễu*.
 
 **Các rò rỉ khác.**
 - **Phiếu gian.** Khi số che công khai, giá trị kiểm là hàm công khai của các ẩn số nhỏ; hội đồng có thể thử hết để suy ra nội dung phiếu gian. Phiếu hợp lệ luôn giải mã ra 0 nên không lộ gì.
@@ -116,10 +116,10 @@ Mỗi chuyên gia giữ biên nhận h_i = H(ct_i). Máy chủ công bố BB, da
 | # | Khoảng trống | Hậu quả | Hướng giải quyết |
 |---|---|---|---|
 | G1 | Bản mã chế tạo sai cấu trúc | Chuyên gia có thể nộp thứ không phải bản mã được tạo đúng | Chứng minh không tiết lộ (ZK) rằng bản mã tạo đúng, ví dụ Greco (IACR ePrint 2024/594); có thể chứng minh luôn phiếu là một-ô và thay thế bước kiểm phiếu |
-| G2 | Mặc định không phủ nhiễu | Bước 3 của chứng minh giữ kín phiếu không đứng vững | Bật `NOISE_FLOODING_MULTIPARTY` (đã đo ở trên) |
+| G2 | ~~Mặc định không phủ nhiễu~~ | ~~Bước 3 của chứng minh không đứng vững~~ | **Đã xử lý ở v0.4** |
 | G3 | Không có chứng minh rằng mảnh giải mã đúng | Thành viên bị mua chuộc có thể làm sai kết quả | Giải mã kiểm chứng được / chứng minh ZK cho mảnh giải mã |
-| G4 | Hàm sinh số che dùng NumPy PCG64 khởi tạo từ SHA-256 | Không phải bộ sinh số ngẫu nhiên mật mã; Định lý 1 giả định số che phân bố đều | Sinh số che bằng SHAKE-256 hoặc HKDF |
-| G5 | Biên chống thử lại phụ thuộc R và p | Khoảng 2^{−58,8} mỗi lần thử khi R = 3 | R = 5 (khoảng 2^{−97,9}) hoặc modulo bản rõ lớn hơn |
+| G4 | ~~Hàm sinh số che dùng NumPy PCG64~~ | ~~Không phải bộ sinh số ngẫu nhiên mật mã~~ | **Đã xử lý ở v0.4:** SHAKE-256 có tách miền và lấy mẫu loại bỏ (phân bố đều chính xác trên [1, p − 1]) |
+| G5 | ~~Biên chống thử lại khi R = 3~~ | ~~Khoảng 2^{−58,8} mỗi lần thử~~ | **Đã xử lý ở v0.4:** R = 5, khoảng 2^{−97,9} mỗi lần thử |
 | G6 | Khôi phục khóa làm lộ một phần khóa | Giảm an toàn ở các đợt sau | Khóa mới cho mỗi đợt |
 | G7 | Tính đúng của BFV dựa vào cách OpenFHE chọn tham số | Mới xác minh bằng thực nghiệm | Phân tích nhiễu hình thức |
 | G8 | Mức an toàn | Mặc định của OpenFHE (128 bit cổ điển), chưa kiểm tra độc lập | Rà soát tham số tường minh |
@@ -129,5 +129,5 @@ Mỗi chuyên gia giữ biên nhận h_i = H(ct_i). Máy chủ công bố BB, da
 ## 8. Tóm tắt
 
 - **Đã chứng minh:** bước kiểm phiếu là đúng đắn (Định lý 1, kèm cận chống thử lại) và kiểm chứng được trước máy chủ gian lận (Định lý 2), dưới các giả định tiêu chuẩn và với điều kiện hội đồng giải mã đúng.
-- **Đã phác thảo, có điều kiện:** giữ kín phiếu, **đòi hỏi bật phủ nhiễu** (G2).
+- **Đã phác thảo:** giữ kín phiếu, đòi hỏi phủ nhiễu (G2), **đã bật từ v0.4**.
 - **Còn mở:** bản mã chế tạo sai (G1) và giải mã kiểm chứng được (G3) là hai khoảng trống quan trọng nhất.

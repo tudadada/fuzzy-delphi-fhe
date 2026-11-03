@@ -4,7 +4,7 @@
 
 Lấy ý kiến chuyên gia bằng **số mờ tam giác** theo phương pháp **Delphi mờ**, trong đó **không ai đọc được phiếu của từng người** — kể cả máy chủ và người tổ chức. Chỉ kết quả chung được giải mã, và chỉ khi **đủ số thành viên hội đồng** (2 trên 3) cùng đồng ý. Bất kỳ ai cũng **tính lại và kiểm chứng** được phép gộp của máy chủ. Phiếu gian bị phát hiện và loại bỏ mà không lộ nội dung.
 
-> **Trạng thái:** bản chứng minh khái niệm (proof of concept), phiên bản v0.3. Dữ liệu giả lập, chưa được chuyên gia mật mã thẩm định, chưa thử với hội đồng thật. Rất mong nhận góp ý và chỉ ra lỗ hổng.
+> **Trạng thái:** bản chứng minh khái niệm (proof of concept), phiên bản v0.4. Dữ liệu giả lập, chưa được chuyên gia mật mã thẩm định, chưa thử với hội đồng thật. Rất mong nhận góp ý và chỉ ra lỗ hổng.
 
 🇬🇧 [English version](README.md)
 
@@ -30,6 +30,23 @@ Phương pháp **Delphi mờ** cho phép chuyên gia trả lời bằng thang ng
 Quy tắc Delphi mờ dùng theo Chen (2000) và Cheng & Lin (2002): đồng thuận khi khoảng cách d ≤ 0,2 với tỷ lệ ≥ 75% chuyên gia; giữ tiêu chí khi điểm giải mờ ≥ 0,5.
 
 > ⚠️ **Thông báo bảo mật (v0.1–v0.2):** bước kiểm tra phiếu hợp lệ trong `03`, `04` và `05` **có lỗ hổng**. Nó cộng gộp x(x−1) của 5 mức trước khi che ngẫu nhiên, nên một phiếu không phải một-ô như (2, b, c, 0, 0) với b + c = −1 và bc = 2 (mod p) vẫn lọt qua. Khi thử, phiếu này làm trung bình mờ sai hơn 1.000 lần trên thang 0–1. **Đã sửa ở v0.3 (`07_public_validity.py`). Không dùng các phiên bản cũ.**
+
+## Điểm mới trong v0.4 (`delphi/09_hardened.py`), phiên bản hiện tại
+
+Gia cố theo [phân tích an toàn](SECURITY.vi.md). Giao thức và mọi phép thử giữ nguyên; chỉ thay ba cài đặt:
+
+1. **Bật phủ nhiễu làm mặc định (G2).** Giải mã ngưỡng dùng chế độ `NOISE_FLOODING_MULTIPARTY` của OpenFHE thay cho mặc định `FIXED_NOISE_MULTIPARTY`, nên mảnh giải mã không còn làm lộ nhiễu phụ thuộc vào khóa. Đây là điều kiện bắt buộc của lập luận giữ kín phiếu.
+2. **Sinh số che theo chuẩn mật mã (G4).** Số che được sinh bằng SHAKE-256 (có tách miền) và lấy mẫu loại bỏ, cho phân bố đều chính xác trên [1, p − 1], thay cho bộ sinh NumPy PCG64.
+3. **Kiểm phiếu 5 lần (G5).** Mỗi lần kẻ gian thử lại chỉ lọt với xác suất ≤ (p − 1)⁻⁵ ≈ 2⁻⁹⁷·⁹.
+
+| Chuyên gia × Tiêu chí | N | Mỗi người gửi | Kiểm phiếu (5 lần) | Mọi phép thử |
+|---|---|---|---|---|
+| 20 × 30 | 16.384 | 1.281 KB | 23,3 s | ✓ |
+| 50 × 100 | 16.384 | 1.281 KB | 60,1 s | ✓ |
+
+Mọi phép thử gồm: bắt cả 3 phiếu gian (kể cả phiếu khai thác lỗ hổng v0.2), không báo nhầm, kiểm toán tính lại khớp, bắt được vu oan, bắt được phiếu chế sẵn, kết quả gộp chính xác. Kiểm tra số che: 200.000 mẫu đều nằm trong [1, p − 1], trung bình 393.079 so với kỳ vọng 393.216.
+
+**Cái giá của gia cố:** dung lượng mỗi người gửi tăng từ 385 KB lên 1.281 KB và bước kiểm phiếu chậm hơn vài lần. Với hội đồng 50 chuyên gia, thời gian máy chủ vẫn khoảng một phút. Bản v0.3 (`07`) được giữ lại để so sánh nhưng không nên dùng khi triển khai.
 
 ## Điểm mới trong v0.3 (`delphi/07_public_validity.py`)
 
@@ -117,13 +134,14 @@ OpenFHE, BFV, độ sâu nhân 2, N = 8192, giải mã ngưỡng 3 bên. Một m
 | `03_threshold_anticheat.py` | + giải mã ngưỡng + chống phiếu gian | 1.925 KB | — | 5 bản mã/người |
 | `04_packed_final.py` | Dồn 5 mức vào 1 bản mã | **385 KB** | — | v0.1 |
 | `05_verifiable_tofn.py` | + ngưỡng 2/3, kiểm chứng công khai, xáo trộn | **385 KB** | — | v0.2 (kiểm phiếu có lỗ hổng) |
-| `07_public_validity.py` | + vá kiểm phiếu, số che công khai, lặp 3 lần | **385 KB** | — | **v0.3 (hiện tại)** |
+| `07_public_validity.py` | + vá kiểm phiếu, số che công khai, lặp 3 lần | **385 KB** | — | v0.3 |
+| `09_hardened.py` | + phủ nhiễu, số che SHAKE-256, lặp 5 lần | **1.281 KB** | — | **v0.4 (hiện tại)** |
 
 Đã thử nén bản mã (zlib, lzma): không giảm được (385 → 382 KB), đúng như lý thuyết vì bản mã có tính ngẫu nhiên cao.
 
 ## Phân tích an toàn
 
-Xem **[SECURITY.vi.md](SECURITY.vi.md)**: mô hình đe dọa, chứng minh bước kiểm phiếu là đúng đắn (Định lý 1, kèm cận chống thử lại) và kiểm chứng được trước máy chủ gian lận (Định lý 2), phác thảo chứng minh có điều kiện cho tính giữ kín phiếu, và danh sách các khoảng trống còn mở. **Quan trọng:** tính giữ kín phiếu đòi hỏi bật chế độ `NOISE_FLOODING_MULTIPARTY` của OpenFHE, vốn không phải mặc định (chi phí đo trong `delphi/08_noise_flooding_check.py`).
+Xem **[SECURITY.vi.md](SECURITY.vi.md)**: mô hình đe dọa, chứng minh bước kiểm phiếu là đúng đắn (Định lý 1, kèm cận chống thử lại) và kiểm chứng được trước máy chủ gian lận (Định lý 2), phác thảo chứng minh có điều kiện cho tính giữ kín phiếu, và danh sách các khoảng trống còn mở. Từ **v0.4**, phủ nhiễu, sinh số che theo chuẩn mật mã và kiểm phiếu 5 lần đều được bật.
 
 ## Giới hạn đã biết
 
@@ -165,7 +183,8 @@ curl -L -o exploration/german.data https://raw.githubusercontent.com/selva86/dat
 
 ```bash
 pip install -r requirements.txt          # Python 3.12 cho OpenFHE
-python delphi/07_public_validity.py       # phiên bản hiện tại (v0.3)
+python delphi/09_hardened.py              # phiên bản hiện tại (v0.4)
+python delphi/07_public_validity.py       # v0.3
 python delphi/05_verifiable_tofn.py       # v0.2
 python delphi/06_baseline_secret_sharing.py   # đối chứng chia sẻ bí mật
 python delphi/04_packed_final.py          # v0.1

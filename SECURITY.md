@@ -1,4 +1,4 @@
-# Security analysis — Encrypted Fuzzy Delphi (v0.3)
+# Security analysis — Encrypted Fuzzy Delphi (v0.3–v0.4)
 
 🇻🇳 [Bản tiếng Việt](SECURITY.vi.md)
 
@@ -104,7 +104,7 @@ Each expert keeps a receipt h_i = H(ct_i). The server publishes BB, the list of 
 | FIXED_NOISE (default, used in v0.3) | 8,192 | 385 KB | 8.9–10.3 s | ✓ |
 | NOISE_FLOODING | 16,384 | 1,281 KB | 32.5–41.2 s | ✓ |
 
-**Recommendation: use `NOISE_FLOODING_MULTIPARTY` in any real deployment.** Until then, the privacy claim should be read as *conditional on adding noise flooding*.
+**Addressed in v0.4:** `NOISE_FLOODING_MULTIPARTY` is the default in `delphi/09_hardened.py`. For v0.3 and earlier, the privacy claim is *conditional on adding noise flooding*.
 
 **Further leakage.**
 - **Invalid ballots.** With public masks the check values are public functions of small unknowns; the committee can brute-force an invalid ballot's content. Valid ballots always decrypt to 0 and leak nothing.
@@ -116,10 +116,10 @@ Each expert keeps a receipt h_i = H(ct_i). The server publishes BB, the list of 
 | # | Gap | Effect | Path forward |
 |---|---|---|---|
 | G1 | Malformed ciphertexts | An expert could submit a ciphertext that is not an honest encryption | Zero-knowledge proof of correct encryption (e.g. Greco, IACR ePrint 2024/594), which could also prove one-hotness and replace the validity check |
-| G2 | No noise flooding by default | Privacy proof (step 3) fails | Enable `NOISE_FLOODING_MULTIPARTY` (measured above) |
+| G2 | ~~No noise flooding by default~~ | ~~Privacy proof (step 3) fails~~ | **Addressed in v0.4** |
 | G3 | No proof of correct partial decryption | A corrupted member could falsify results | Verifiable decryption / ZK proofs of partial decryption |
-| G4 | Mask expander uses NumPy PCG64 seeded from SHA-256 | Not a cryptographic PRG; Theorem 1 assumes uniform masks | Derive masks with SHAKE-256 or HKDF |
-| G5 | Grinding margin depends on R and p | ≈ 2^{−58.8} per attempt at R = 3 | R = 5 (≈ 2^{−97.9}) or a larger plaintext modulus |
+| G4 | ~~Mask expander uses NumPy PCG64~~ | ~~Not a cryptographic PRG~~ | **Addressed in v0.4:** SHAKE-256 with domain separation and rejection sampling (exactly uniform on [1, p − 1]) |
+| G5 | ~~Grinding margin at R = 3~~ | ~~≈ 2^{−58.8} per attempt~~ | **Addressed in v0.4:** R = 5, ≈ 2^{−97.9} per attempt |
 | G6 | Key recovery exposes a share | Reduces security in later sessions | Fresh keys per consultation |
 | G7 | BFV correctness relies on OpenFHE parameter selection | Verified empirically only | Formal noise analysis |
 | G8 | Security level | OpenFHE default (128-bit classical) not independently checked | Explicit parameter audit |
@@ -129,5 +129,5 @@ Each expert keeps a receipt h_i = H(ct_i). The server publishes BB, the list of 
 ## 8. Summary
 
 - **Proved:** soundness of ballot validation (Theorem 1, with grinding bound) and verifiability against a cheating server (Theorem 2), under standard assumptions and correct committee decryption.
-- **Sketched, conditional:** ballot privacy, which **requires enabling noise flooding** (G2).
+- **Sketched:** ballot privacy, which requires noise flooding (G2) — **enabled from v0.4**.
 - **Open:** malformed ciphertexts (G1) and verifiable decryption (G3) are the most important remaining gaps.

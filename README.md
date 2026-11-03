@@ -4,7 +4,7 @@
 
 Expert consensus with **triangular fuzzy numbers** using the **fuzzy Delphi method**, where **nobody can read an individual expert's ballot** — not the server, not the organiser. Only the aggregate result is decrypted, and only when **enough committee members** (2 of 3) agree. Anyone can **recompute and verify** the server's aggregation. Cheating ballots are detected and discarded without revealing their content.
 
-> **Status:** proof of concept (v0.3). Simulated data, not yet reviewed by cryptographers, not yet tested with a real panel. Feedback and vulnerability reports are very welcome.
+> **Status:** proof of concept (v0.4). Simulated data, not yet reviewed by cryptographers, not yet tested with a real panel. Feedback and vulnerability reports are very welcome.
 
 🇻🇳 [Bản tiếng Việt](README.vi.md)
 
@@ -30,6 +30,23 @@ The **fuzzy Delphi method** lets experts answer on a linguistic scale (very low 
 Fuzzy Delphi rules follow Chen (2000) and Cheng & Lin (2002): consensus when distance d ≤ 0.2 for ≥ 75% of experts; a criterion is kept when its defuzzified score ≥ 0.5.
 
 > ⚠️ **Security notice (v0.1–v0.2):** the ballot-validity check in `03`, `04` and `05` is **flawed**. It summed x(x−1) over the 5 levels before masking, so a non-one-hot ballot such as (2, b, c, 0, 0) with b + c = −1 and bc = 2 (mod p) passes the check. In tests this distorted the fuzzy mean by over 1,000× on a 0–1 scale. **Fixed in v0.3 (`07_public_validity.py`). Do not use earlier versions.**
+
+## What's new in v0.4 (`delphi/09_hardened.py`) — current
+
+Hardening based on the [security analysis](SECURITY.md). The protocol and all tests are unchanged; three settings change:
+
+1. **Noise flooding on by default (G2).** Threshold decryption uses OpenFHE's `NOISE_FLOODING_MULTIPARTY` instead of the default `FIXED_NOISE_MULTIPARTY`, so partial decryptions no longer leak key-dependent noise. This is required for the ballot-privacy argument.
+2. **Cryptographic mask derivation (G4).** Masks are derived with SHAKE-256 (domain-separated) and rejection sampling, giving exactly uniform values in [1, p − 1], instead of NumPy PCG64.
+3. **5 validity-check repetitions (G5).** Each grinding attempt now succeeds with probability ≤ (p − 1)⁻⁵ ≈ 2⁻⁹⁷·⁹.
+
+| Experts × Criteria | N | Upload per expert | Validation (5×) | All tests |
+|---|---|---|---|---|
+| 20 × 30 | 16,384 | 1,281 KB | 23.3 s | ✓ |
+| 50 × 100 | 16,384 | 1,281 KB | 60.1 s | ✓ |
+
+All tests = 3 cheating ballots caught (including the v0.2 exploit), no false positives, auditor recomputation matches, false accusations caught, pre-crafted ballots caught, exact aggregate. Mask sanity check: 200,000 samples all in [1, p − 1], mean 393,079 vs. expected 393,216.
+
+**Cost of hardening:** upload grows from 385 KB to 1,281 KB per expert and validation is several times slower. For a panel of 50 experts this remains about a minute of server time. v0.3 (`07`) is kept for comparison but should not be used in deployment.
 
 ## What's new in v0.3 (`delphi/07_public_validity.py`)
 
@@ -117,13 +134,14 @@ OpenFHE, BFV, multiplicative depth 2, N = 8192, 3-party threshold decryption. A 
 | `03_threshold_anticheat.py` | + threshold decryption + ballot validation | 1,925 KB | — | 5 ciphertexts per expert |
 | `04_packed_final.py` | Pack all 5 levels into 1 ciphertext | **385 KB** | — | v0.1 |
 | `05_verifiable_tofn.py` | + 2-of-3 threshold, public verification, shuffling | **385 KB** | — | v0.2 (flawed validity check) |
-| `07_public_validity.py` | + fixed validity check, public masks, 3 repetitions | **385 KB** | — | **v0.3 (current)** |
+| `07_public_validity.py` | + fixed validity check, public masks, 3 repetitions | **385 KB** | — | v0.3 |
+| `09_hardened.py` | + noise flooding, SHAKE-256 masks, 5 repetitions | **1,281 KB** | — | **v0.4 (current)** |
 
 Compressing ciphertexts (zlib, lzma) gave no reduction (385 → 382 KB), as expected for high-entropy data.
 
 ## Security analysis
 
-See **[SECURITY.md](SECURITY.md)**: threat model, proofs of ballot-validation soundness (Theorem 1, with a grinding bound) and verifiability against a cheating server (Theorem 2), a conditional proof sketch for ballot privacy, and the list of open gaps. **Important:** ballot privacy requires enabling OpenFHE's `NOISE_FLOODING_MULTIPARTY` mode, which is not the default (cost measured in `delphi/08_noise_flooding_check.py`).
+See **[SECURITY.md](SECURITY.md)**: threat model, proofs of ballot-validation soundness (Theorem 1, with a grinding bound) and verifiability against a cheating server (Theorem 2), a conditional proof sketch for ballot privacy, and the list of open gaps. Noise flooding, cryptographic mask derivation and 5 repetitions are enabled from **v0.4**.
 
 ## Known limitations
 
@@ -165,7 +183,8 @@ curl -L -o exploration/german.data https://raw.githubusercontent.com/selva86/dat
 
 ```bash
 pip install -r requirements.txt          # Python 3.12 for OpenFHE
-python delphi/07_public_validity.py       # current version (v0.3)
+python delphi/09_hardened.py              # current version (v0.4)
+python delphi/07_public_validity.py       # v0.3
 python delphi/05_verifiable_tofn.py       # v0.2
 python delphi/06_baseline_secret_sharing.py   # secret-sharing comparison
 python delphi/04_packed_final.py          # v0.1
