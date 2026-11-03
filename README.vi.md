@@ -1,6 +1,6 @@
 # Delphi mờ trên dữ liệu mã hóa đồng cấu (Encrypted Fuzzy Delphi)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23928557.svg)](https://doi.org/10.5281/zenodo.23928557)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23930314.svg)](https://doi.org/10.5281/zenodo.23930314)
 
 Lấy ý kiến chuyên gia bằng **số mờ tam giác** theo phương pháp **Delphi mờ**, trong đó **không ai đọc được phiếu của từng người** — kể cả máy chủ và người tổ chức. Chỉ kết quả chung được giải mã, và chỉ khi **đủ số thành viên hội đồng** (2 trên 3) cùng đồng ý. Bất kỳ ai cũng **tính lại và kiểm chứng** được phép gộp của máy chủ. Phiếu gian bị phát hiện và loại bỏ mà không lộ nội dung.
 
