@@ -1,0 +1,15 @@
+{
+  "survey": "demo",
+  "round": 1,
+  "opened_by": 2,
+  "voted": 20,
+  "invalid": 0,
+  "board_url": "#",
+  "criteria": [
+    { "criterion": 0, "fuzzy_mean": [0.5375, 0.7875, 0.95], "score": 0.7583, "agree_share": 0.9, "consensus": true, "keep": true },
+    { "criterion": 1, "fuzzy_mean": [0.3875, 0.6375, 0.8625], "score": 0.6292, "agree_share": 0.8, "consensus": true, "keep": true },
+    { "criterion": 2, "fuzzy_mean": [0.1625, 0.375, 0.625], "score": 0.3875, "agree_share": 0.55, "consensus": false, "keep": false },
+    { "criterion": 3, "fuzzy_mean": [0.3, 0.55, 0.7875], "score": 0.5458, "agree_share": 0.7, "consensus": false, "keep": true },
+    { "criterion": 4, "fuzzy_mean": [0.4625, 0.7125, 0.9125], "score": 0.6958, "agree_share": 0.85, "consensus": true, "keep": true }
+  ]
+}

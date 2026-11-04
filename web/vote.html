@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vote · Private Delphi</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="vote">
+<main class="wrap">
+  <p class="small muted" id="survey-title"></p>
+  <h1 data-i18n="vote.title"></h1>
+  <div class="steps" aria-hidden="true">
+    <span id="st-pick" class="on" data-i18n="vote.step.pick"></span>
+    <span id="st-lock" data-i18n="vote.step.lock"></span>
+    <span id="st-sent" data-i18n="vote.step.sent"></span>
+  </div>
+  <div id="demo-note" class="note warn" hidden style="margin-bottom:16px"><span data-i18n="vote.demo"></span></div>
+
+  <section id="pick" class="card" aria-live="polite">
+    <p class="small muted" id="progress"></p>
+    <h2 id="crit-name" style="margin:0 0 4px"></h2>
+    <p class="muted" data-i18n="vote.question" style="margin:0 0 14px"></p>
+    <div class="levels" id="levels" role="radiogroup"></div>
+    <div class="dots" id="dots" aria-label="Criteria"></div>
+    <div class="note ok"><span id="lock-icon"></span><span data-i18n="vote.lock.note"></span></div>
+    <div class="row-actions">
+      <button type="button" id="prev" data-i18n="vote.prev"></button>
+      <button type="button" id="next" class="primary" data-i18n="vote.next"></button>
+    </div>
+    <p class="err" id="err" role="alert"></p>
+  </section>
+
+  <section id="review" class="card" hidden>
+    <h2 data-i18n="vote.review.title" style="margin-top:0"></h2>
+    <div id="review-list"></div>
+    <div class="note ok" style="margin-top:16px"><span class="lock-slot"></span><span data-i18n="vote.lock.note"></span></div>
+    <div class="row-actions">
+      <button type="button" id="back-edit" data-i18n="vote.prev"></button>
+      <button type="button" id="submit" class="primary" data-i18n="vote.submit"></button>
+    </div>
+    <p class="err" id="err2" role="alert"></p>
+  </section>
+
+  <section id="busy" class="card" hidden><p id="busy-text" style="margin:0"></p></section>
+
+  <section id="sent" class="card" hidden>
+    <h2 style="margin-top:0;display:flex;gap:8px;align-items:center"><span id="sent-icon"></span><span data-i18n="vote.sent.title"></span></h2>
+    <p class="muted" data-i18n="vote.sent.body"></p>
+    <p class="small muted" data-i18n="vote.receipt" style="margin-bottom:4px"></p>
+    <div class="receipt" id="receipt"></div>
+    <p><button type="button" id="copy" data-i18n="vote.copy"></button></p>
+  </section>
+</main>
+<script src="assets/layout.js"></script>
+<script src="assets/i18n.js"></script>
+<script src="assets/ballot-crypto.js"></script>
+<script src="assets/vote.js"></script>
+</body>
+</html>

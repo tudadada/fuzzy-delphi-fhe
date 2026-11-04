@@ -1,0 +1,12 @@
+{
+  "id": "demo",
+  "round": 1,
+  "title": { "en": "Quality of a teacher training program", "vi": "Chất lượng chương trình đào tạo giáo viên" },
+  "criteria": [
+    { "en": "Well-trained teachers", "vi": "Giáo viên được đào tạo bài bản" },
+    { "en": "Adequate facilities", "vi": "Cơ sở vật chất đầy đủ" },
+    { "en": "Low tuition", "vi": "Học phí thấp" },
+    { "en": "Strong industry links", "vi": "Gắn kết chặt chẽ với doanh nghiệp" },
+    { "en": "Up-to-date curriculum", "vi": "Chương trình học cập nhật" }
+  ]
+}

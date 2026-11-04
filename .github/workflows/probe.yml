@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [app-layer]
-    paths: ["probe/**", "fdfhe/**", "tests/**", ".github/workflows/probe.yml", ".github/scripts/**"]
+    paths: ["probe/**", "fdfhe/**", "tests/**", ".github/workflows/probe.yml", ".github/scripts/**", "web/i18n/**", "scripts/**"]
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -14,3 +14,4 @@ jobs:
       - run: pip install openfhe numpy pytest
       - run: bash .github/scripts/notice.sh api-probe python probe/api_probe.py
       - run: bash .github/scripts/notice.sh pytest python -m pytest -q tests/
+      - run: python scripts/check_i18n.py
