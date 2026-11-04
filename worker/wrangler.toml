@@ -10,12 +10,12 @@ run_worker_first = ["/api/*"]
 
 [[kv_namespaces]]
 binding = "FILES"
-id = "REPLACE_WITH_KV_ID"
+id = "6612c0042d054d759c31ac11ce60a2a8"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "private-delphi"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "979ffa41-8e92-4096-aace-7877cee8551e"
 
 [vars]
 GH_REPO = "tudadada/fuzzy-delphi-fhe"
