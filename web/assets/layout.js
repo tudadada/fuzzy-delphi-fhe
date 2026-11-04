@@ -9,7 +9,7 @@
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
     <span data-i18n="app.name"></span>
   </a>
-  <nav class="links">${link("index.html", "nav.home")}${link("vote.html", "nav.vote")}${link("results.html", "nav.results")}${link("how.html", "nav.how")}</nav>
+  <nav class="links">${link("index.html", "nav.home")}${link("vote.html", "nav.vote")}${link("results.html", "nav.results")}${link("how.html", "nav.how")}${link("organize.html", "nav.organize")}</nav>
   <div class="lang" role="group" data-i18n-attr="aria-label:lang.label">
     <button type="button" data-lang="en">EN</button><button type="button" data-lang="vi">VI</button>
   </div>

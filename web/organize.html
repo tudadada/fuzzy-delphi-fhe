@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organize · Private Delphi</title>
+<meta name="referrer" content="no-referrer">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="organize">
+<main class="wrap">
+  <section id="create">
+    <h1 data-i18n="org.title"></h1>
+    <p class="lead" data-i18n="org.lead"></p>
+    <form id="form" class="card form" novalidate>
+      <label><span data-i18n="org.adminkey"></span>
+        <input id="admin" type="password" autocomplete="off" required>
+        <small class="muted" data-i18n="org.adminkey.help"></small></label>
+      <div class="grid">
+        <label><span data-i18n="org.survey.en"></span><input id="t-en" type="text"></label>
+        <label><span data-i18n="org.survey.vi"></span><input id="t-vi" type="text"></label>
+      </div>
+      <label><span data-i18n="org.criteria"></span>
+        <textarea id="criteria" rows="7" data-i18n-attr="placeholder:org.criteria.placeholder"></textarea>
+        <small class="muted" data-i18n="org.criteria.help"></small></label>
+      <label style="max-width:240px"><span data-i18n="org.experts"></span><input id="experts" type="number" min="1" max="500" value="10"></label>
+      <p class="err" id="err" role="alert"></p>
+      <button type="submit" class="primary" id="go" data-i18n="org.create"></button>
+    </form>
+  </section>
+
+  <section id="links" hidden>
+    <h1 data-i18n="org.links.title"></h1>
+    <div class="note warn" style="margin-bottom:16px"><span data-i18n="org.links.warn"></span></div>
+    <p><button type="button" id="dl" class="primary" data-i18n="org.links.download"></button></p>
+    <div class="card"><h3 data-i18n="org.links.organizer"></h3><div id="l-org"></div></div>
+    <div class="card" style="margin-top:12px"><h3 data-i18n="org.links.holders"></h3><div id="l-holders"></div></div>
+    <div class="card" style="margin-top:12px"><h3 data-i18n="org.links.experts"></h3><div id="l-experts"></div></div>
+  </section>
+
+  <section id="dash" hidden>
+    <p class="small muted" id="d-title"></p>
+    <h1 data-i18n="org.dash.title"></h1>
+    <ol class="timeline" id="timeline"></ol>
+    <div class="metrics" style="margin-top:20px">
+      <div class="metric"><span class="small muted" id="d-round"></span><b id="d-status"></b></div>
+      <div class="metric"><span class="small muted" data-i18n="org.dash.ballots"></span><b id="d-ballots"></b></div>
+    </div>
+    <div class="card" id="d-holders"></div>
+    <p class="row-actions" style="justify-content:flex-start">
+      <button type="button" id="b-close" class="primary" hidden data-i18n="org.close"></button>
+      <button type="button" id="b-next" hidden></button>
+      <a class="btn" id="b-results" hidden data-i18n="org.viewresults"></a>
+      <button type="button" id="b-refresh" data-i18n="org.refresh"></button>
+    </p>
+    <p class="err" id="d-err" role="alert"></p>
+    <p class="small muted" data-i18n="org.auto"></p>
+  </section>
+</main>
+<script src="assets/layout.js"></script>
+<script src="assets/i18n.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/organize.js"></script>
+</body>
+</html>

@@ -87,3 +87,28 @@ button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); out
 .tri { display: block; width: 100%; height: 34px; margin-top: 6px; }
 footer { border-top: 1px solid var(--border); padding: 20px 0; font-size: 13px; color: var(--faint); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.form { display: grid; gap: 14px; }
+.form label { display: grid; gap: 4px; font-size: 14px; font-weight: 500; }
+.form small { font-weight: 400; }
+input[type=text], input[type=password], input[type=number], input[type=file], textarea, select {
+  font: inherit; font-size: 15px; color: var(--text); background: var(--surface); width: 100%;
+  border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 8px 10px;
+}
+textarea { resize: vertical; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button:disabled { opacity: .55; cursor: progress; }
+.linkrow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; margin: 6px 0; }
+.linkrow input { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.timeline { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 6px; }
+.timeline li { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: var(--radius); background: var(--surface-2); color: var(--muted); font-size: 14px; }
+.timeline li.done { background: var(--ok-bg); color: var(--ok); }
+.timeline li.now { background: var(--accent-bg); color: var(--accent-text); font-weight: 600; }
+.task { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; padding: 16px 0; border-top: 1px solid var(--border); }
+.task:first-child { border-top: 0; }
+.task .num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 600; background: var(--surface-2); color: var(--muted); }
+.task.done .num { background: var(--ok-bg); color: var(--ok); }
+.task.now .num { background: var(--accent-bg); color: var(--accent-text); }
+.task h3 { margin: 2px 0 2px; }
+.task p { margin: 0 0 10px; }
+.progress { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.progress i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
