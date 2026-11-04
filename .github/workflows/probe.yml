@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [app-layer]
-    paths: ["probe/**", "fdfhe/**", "tests/**", ".github/workflows/probe.yml"]
+    paths: ["probe/**", "fdfhe/**", "tests/**", ".github/workflows/probe.yml", ".github/scripts/**"]
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -12,5 +12,5 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install openfhe numpy pytest
-      - run: python probe/api_probe.py
-      - run: python -m pytest -q tests/test_fdfhe.py
+      - run: bash .github/scripts/notice.sh api-probe python probe/api_probe.py
+      - run: bash .github/scripts/notice.sh pytest python -m pytest -q tests/
