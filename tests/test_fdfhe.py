@@ -70,6 +70,20 @@ def test_aggregate_exact(round_data):
         assert abs(r["agree_share"] - (dp[:, k] <= 0.2 + 1e-12).mean()) < 1e-4
 
 
+def test_batched_validity(round_data):
+    from fdfhe.batch import combined_checks
+    com, cc, votes, cts, receipts = round_data
+    seed = fdfhe.board_seed(receipts)
+    # with the two cheaters: every repetition must be non-zero
+    bad = [com.decrypt(c, K) for c in combined_checks(cc, K, cts, seed)]
+    assert all(np.any(v != 0) for v in bad)
+    # honest ballots only: every repetition decrypts to exactly zero
+    honest = cts[2:]
+    seed_h = fdfhe.board_seed(receipts[2:])
+    ok = [com.decrypt(c, K) for c in combined_checks(cc, K, honest, seed_h)]
+    assert all(np.all(v == 0) for v in ok)
+
+
 def test_single_holder_blocked(round_data):
     com, cc, votes, cts, receipts = round_data
     with pytest.raises(PermissionError):

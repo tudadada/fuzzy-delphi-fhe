@@ -1,0 +1,46 @@
+name: round
+# Runs the public server steps for the deployed Worker: finish ceremonies, process closed
+# rounds, fuse partial decryptions. No secret keys are involved: anyone can rerun these steps.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      survey: { description: "Survey id (empty = everything pending)", required: false, default: "" }
+      phase: { description: "finish | process | advance (empty = what the API says)", required: false, default: "" }
+concurrency: { group: round, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      FDFHE_API: ${{ vars.FDFHE_API }}
+      FDFHE_ACTION_KEY: ${{ secrets.FDFHE_ACTION_KEY }}
+    steps:
+      - name: Anything to do?
+        id: jobs
+        run: |
+          if [ -z "$FDFHE_API" ]; then echo "FDFHE_API variable not set; nothing to do"; echo "list=[]" >> $GITHUB_OUTPUT; exit 0; fi
+          if [ -n "${{ inputs.survey }}" ] && [ -n "${{ inputs.phase }}" ]; then
+            echo 'list=[{"survey":"${{ inputs.survey }}","phase":"${{ inputs.phase }}"}]' >> $GITHUB_OUTPUT
+          else
+            echo "list=$(curl -sf $FDFHE_API/api/pending || echo '[]')" >> $GITHUB_OUTPUT
+          fi
+      - uses: actions/checkout@v4
+        if: steps.jobs.outputs.list != '[]'
+      - uses: actions/setup-node@v4
+        if: steps.jobs.outputs.list != '[]'
+        with: { node-version: "22" }
+      - uses: actions/setup-python@v5
+        if: steps.jobs.outputs.list != '[]'
+        with: { python-version: "3.12" }
+      - name: Run pending steps
+        if: steps.jobs.outputs.list != '[]'
+        run: |
+          pip install -q openfhe numpy
+          echo '${{ steps.jobs.outputs.list }}' | python -c "import sys,json;[print(j['survey'],j['phase']) for j in json.load(sys.stdin)]" |
+          while read sid phase; do
+            echo "::group::$sid $phase"
+            if [ "$phase" = finish ]; then node server/finish.js "$sid"; else python server/round.py "$phase" "$sid"; fi || echo "::warning::$sid $phase failed"
+            echo "::endgroup::"
+          done

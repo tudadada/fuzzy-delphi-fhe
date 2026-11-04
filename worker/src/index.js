@@ -180,6 +180,22 @@ async function getFile(env, sid, path, url) {
   return new Response(v, { headers: { "content-type": "application/octet-stream", "cache-control": "public, max-age=31536000, immutable", ...CORS } });
 }
 
+// Work for the scheduled round workflow: finish ceremonies, process closed rounds, advance openings.
+async function pending(env) {
+  const rows = await env.DB.prepare(
+    "SELECT s.id, s.status, s.round, " +
+    "(SELECT COUNT(*) FROM files f WHERE f.survey = s.id AND f.path LIKE 'ceremony/_/mult.bin' AND f.done = f.parts) AS mult, " +
+    "(SELECT COUNT(*) FROM files f WHERE f.survey = s.id AND f.path = 'keys/evalrot.bin' AND f.done = f.parts) AS keys " +
+    "FROM surveys s WHERE s.status IN ('ceremony', 'closed', 'opening')").all();
+  const jobs = [];
+  for (const r of rows.results) {
+    if (r.status === "ceremony" && r.mult === 3 && r.keys === 0) jobs.push({ survey: r.id, phase: "finish" });
+    if (r.status === "closed") jobs.push({ survey: r.id, phase: "process" });
+    if (r.status === "opening") jobs.push({ survey: r.id, phase: "advance" });
+  }
+  return json(jobs);
+}
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -189,6 +205,7 @@ export default {
     const seg = url.pathname.split("/").filter(Boolean);   // ["api", ...]
     try {
       if (req.method === "POST" && seg[1] === "surveys" && seg.length === 2) return await createSurvey(req, env);
+      if (req.method === "GET" && seg[1] === "pending" && seg.length === 2) return await pending(env);
       if (seg[1] !== "s" || !seg[2]) return err(404, "not found");
       const s = await getSurvey(env, seg[2]);
       if (!s) return err(404, "survey not found");
