@@ -5,6 +5,8 @@ const assert = require("node:assert");
 const crypto = require("node:crypto");
 
 const BASE = process.env.BASE || "http://127.0.0.1:8787";
+const ADMIN = process.env.ADMIN_KEY || "local-admin";
+const ACTION = process.env.ACTION_KEY || "local-action";
 const api = (p, init = {}) => fetch(BASE + p, init);
 const auth = (t) => ({ authorization: `Bearer ${t}` });
 const hex = (b) => crypto.createHash("sha256").update(b).digest("hex");
@@ -16,7 +18,7 @@ test("admin creates a survey; wrong key refused", async () => {
   assert.strictEqual(bad.status, 403);
   const r = await api("/api/surveys", {
     method: "POST",
-    body: JSON.stringify({ admin_key: "local-admin", title: { en: "Test", vi: "Thử" },
+    body: JSON.stringify({ admin_key: ADMIN, title: { en: "Test", vi: "Thử" },
       criteria: [{ en: "A", vi: "A" }, { en: "B", vi: "B" }], experts: 3 }),
   });
   assert.strictEqual(r.status, 200);
@@ -54,7 +56,7 @@ test("holder writes only its own ceremony folder; files are write-once; multipar
 });
 
 test("action writes keys/; experts vote only while open, once per round", async () => {
-  let r = await api(`/api/s/${S}/f/keys/pk.bin`, { method: "PUT", headers: auth("local-action"), body: "pk" });
+  let r = await api(`/api/s/${S}/f/keys/pk.bin`, { method: "PUT", headers: auth(ACTION), body: "pk" });
   assert.strictEqual(r.status, 200);
   const ballot = crypto.randomBytes(2048);
   const rec = hex(ballot);
