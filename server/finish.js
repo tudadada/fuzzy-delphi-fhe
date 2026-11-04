@@ -8,14 +8,22 @@ const FdCeremony = require("../web/assets/ceremony.js");
 const BASE = (process.env.FDFHE_API || "http://127.0.0.1:8787").replace(/\/$/, "");
 const KEY = process.env.FDFHE_ACTION_KEY || "";
 const PART = 20 * 1024 * 1024;
+
+// Retry dropped keep-alive sockets (the server closes idle connections while cer.finish() runs).
+async function fetchRetry(url, init) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await fetch(url, init); }
+    catch (e) { if (attempt >= 3) throw e; await new Promise((ok) => setTimeout(ok, 500 * (attempt + 1))); }
+  }
+}
 const LIB = process.env.OWASM_LIB || path.join(__dirname, "..", "web", "vendor", "openfhe");
 
 async function getFile(sid, p) {
-  const meta = await (await fetch(`${BASE}/api/s/${sid}/f/${p}?meta`)).json();
+  const meta = await (await fetchRetry(`${BASE}/api/s/${sid}/f/${p}?meta`)).json();
   if (meta.done !== meta.parts) throw new Error(`${p} incomplete`);
   const bufs = [];
   for (let i = 0; i < meta.parts; i++) {
-    const r = await fetch(`${BASE}/api/s/${sid}/f/${p}?part=${i}`);
+    const r = await fetchRetry(`${BASE}/api/s/${sid}/f/${p}?part=${i}`);
     if (!r.ok) throw new Error(`GET ${p}#${i}: ${r.status}`);
     bufs.push(Buffer.from(await r.arrayBuffer()));
   }
@@ -25,10 +33,10 @@ async function getFile(sid, p) {
 async function putFile(sid, p, data) {
   const parts = Math.max(1, Math.ceil(data.length / PART));
   for (let i = 0; i < parts; i++) {
-    const r = await fetch(`${BASE}/api/s/${sid}/f/${p}?parts=${parts}&part=${i}`, {
+    const r = await fetchRetry(`${BASE}/api/s/${sid}/f/${p}?parts=${parts}&part=${i}`, {
       method: "PUT", headers: { authorization: `Bearer ${KEY}` }, body: data.subarray(i * PART, (i + 1) * PART),
     });
-    if (!r.ok) throw new Error(`PUT ${p}#${i}: ${r.status} ${await r.text()}`);
+    if (!r.ok && r.status !== 409) throw new Error(`PUT ${p}#${i}: ${r.status} ${await r.text()}`);
   }
 }
 
@@ -44,7 +52,7 @@ async function main(sid) {
   await putFile(sid, "keys/pk.bin", pk);
   await putFile(sid, "keys/evalmult.bin", fin.evalMult);
   await putFile(sid, "keys/evalrot.bin", fin.evalRot);
-  const r = await fetch(`${BASE}/api/s/${sid}/status`, {
+  const r = await fetchRetry(`${BASE}/api/s/${sid}/status`, {
     method: "POST", headers: { authorization: `Bearer ${KEY}`, "content-type": "application/json" },
     body: JSON.stringify({ status: "open" }),
   });
