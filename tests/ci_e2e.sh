@@ -13,4 +13,5 @@ curl -sf "$BASE/index.html" > /dev/null || { echo "wrangler dev did not start"; 
 node --test test/api.test.js 2>&1 | grep -E "^(ok|not ok)|# (pass|fail)|rror" || true
 node --test test/api.test.js > /dev/null
 cd "$ROOT"
-node tests/e2e.js || { echo "--- wrangler log"; tail -40 /tmp/wrangler.log; exit 1; }
+node tests/e2e.js > /tmp/e2e.log 2>&1 || { echo "--- wrangler (tail)"; tail -8 /tmp/wrangler.log | cut -c1-160; echo "--- e2e"; tail -60 /tmp/e2e.log; exit 1; }
+tail -25 /tmp/e2e.log
