@@ -1,14 +1,14 @@
-name: wasm-spike
+name: wasm
 on:
   workflow_dispatch:
   push:
     branches: [app-layer]
-    paths: ["spike/**", "fdfhe/**", ".github/workflows/wasm-spike.yml", ".github/scripts/**"]
+    paths: ["spike/**", "fdfhe/**", "wasm/**", "web/assets/ceremony.js", ".github/workflows/wasm-spike.yml", ".github/scripts/**"]
 env:
   OPENFHE_TAG: v1.6.1
   EMSDK_VERSION: 4.0.8
 jobs:
-  roundtrip:
+  build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -17,35 +17,37 @@ jobs:
         with: { node-version: "22" }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: Cache wasm build
-        id: cache
+      - name: Cache OpenFHE (wasm build)
+        id: ofhe
+        uses: actions/cache@v4
+        with:
+          path: ~/ofhe-wasm
+          key: ofhe-wasm-${{ env.OPENFHE_TAG }}-${{ env.EMSDK_VERSION }}-v1
+      - name: Cache bindings
+        id: bind
         uses: actions/cache@v4
         with:
           path: ~/owasm-out
-          key: owasm-${{ env.OPENFHE_TAG }}-${{ env.EMSDK_VERSION }}-v1
+          key: owasm-fd-${{ env.OPENFHE_TAG }}-${{ env.EMSDK_VERSION }}-${{ hashFiles('wasm/**') }}
       - uses: mymindstorm/setup-emsdk@v14
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.ofhe.outputs.cache-hit != 'true' || steps.bind.outputs.cache-hit != 'true'
         with: { version: "${{ env.EMSDK_VERSION }}" }
       - name: Build OpenFHE for wasm
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.ofhe.outputs.cache-hit != 'true'
         run: |
           git clone -q --depth 1 --branch $OPENFHE_TAG https://github.com/openfheorg/openfhe-development.git ofhe
           mkdir ofhe/embuild && cd ofhe/embuild
           emcmake cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/ofhe-wasm -DBUILD_UNITTESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DWITH_OPENMP=OFF
           emmake make -j4
           emmake make install
-      - name: Build openfhe-wasm bindings
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          git clone -q --depth 1 https://github.com/openfheorg/openfhe-wasm.git owasm
-          mkdir owasm/build && cd owasm/build
-          emcmake cmake .. -DOpenFHE_DIR=$HOME/ofhe-wasm/lib/OpenFHE
-          emmake make -j4
-          mkdir -p $HOME/owasm-out && cp -r ../lib $HOME/owasm-out/
-          ls -la $HOME/owasm-out/lib
+      - name: Build openfhe-wasm with fdfhe bindings
+        if: steps.bind.outputs.cache-hit != 'true'
+        run: OFHE_PREFIX=$HOME/ofhe-wasm bash .github/scripts/notice.sh wasm-build bash wasm/build.sh
       - run: pip install openfhe numpy
-      - name: Round trip wasm -> python
-        env: { OWASM: "${{ env.HOME }}/owasm-out" }
+      - name: Ballot encrypted in wasm, checked in python
         run: OWASM=$HOME/owasm-out bash .github/scripts/notice.sh wasm-roundtrip python spike/wasm_roundtrip.py
+      - name: Key ceremony in wasm, full round
+        run: OWASM=$HOME/owasm-out bash .github/scripts/notice.sh wasm-ceremony python spike/ceremony_py.py
       - uses: actions/upload-artifact@v4
-        with: { name: openfhe-wasm-lib, path: ~/owasm-out/lib }
+        if: always()
+        with: { name: openfhe-wasm-lib, path: ~/owasm-out/lib, if-no-files-found: ignore }
