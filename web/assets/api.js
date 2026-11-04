@@ -6,8 +6,22 @@
     base = (base || "").replace(/\/$/, "");
     const auth = token ? { authorization: `Bearer ${token}` } : {};
 
+    // Retries network failures (dropped keep-alive sockets, flaky Wi-Fi). Safe: reads are idempotent,
+    // file writes are write-once (a repeated part returns 409, which put() treats as done), and a
+    // repeated ballot returns 409 "already voted" rather than counting twice.
+    async function send(url, init) {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await fetch(url, init);
+        } catch (e) {
+          if (attempt >= 3) throw e;
+          await new Promise((ok) => setTimeout(ok, 500 * (attempt + 1)));
+        }
+      }
+    }
+
     async function req(method, path, body, headers = {}) {
-      const r = await fetch(base + path, { method, body, headers: { ...auth, ...headers } });
+      const r = await send(base + path, { method, body, headers: { ...auth, ...headers } });
       if (!r.ok) {
         let msg = `${r.status}`;
         try { msg = (await r.json()).error || msg; } catch (_) {}
@@ -27,7 +41,7 @@
       createSurvey: async (body) =>
         (await req("POST", "/api/surveys", JSON.stringify(body), { "content-type": "application/json" })).json(),
       async meta(sid, path) {
-        const r = await fetch(`${base}/api/s/${sid}/f/${path}?meta`);
+        const r = await send(`${base}/api/s/${sid}/f/${path}?meta`);
         return r.ok ? r.json() : null;
       },
       async has(sid, path) {
