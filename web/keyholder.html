@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Key holder · Private Delphi</title>
+<meta name="referrer" content="no-referrer">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="keyholder">
+<main class="wrap">
+  <p class="small muted" id="s-title"></p>
+  <h1 data-i18n="kh.title"></h1>
+  <p class="lead" data-i18n="kh.lead"></p>
+  <div class="note ok" style="margin-bottom:12px"><span id="lock"></span><span id="you"></span></div>
+  <p class="muted" id="status"></p>
+  <div id="fatal" class="note bad" hidden></div>
+
+  <section id="loadbox" class="card form" hidden style="margin-bottom:16px">
+    <label><span data-i18n="kh.open.file"></span><input type="file" id="l-file" accept=".json,application/json"></label>
+    <label><span data-i18n="kh.passphrase"></span><input type="password" id="l-pass" autocomplete="current-password"></label>
+    <p class="err" id="l-err" role="alert"></p>
+    <button type="button" class="primary" id="l-go" data-i18n="kh.open.load"></button>
+  </section>
+
+  <section id="setup" class="card" hidden>
+    <div class="task" id="t1"><span class="num">1</span><div>
+      <h3 data-i18n="kh.step.create"></h3>
+      <p class="small muted" data-i18n="kh.step.create.body"></p>
+      <p class="small muted" id="t1-wait"></p>
+      <button type="button" class="primary" id="t1-go" hidden data-i18n="kh.start"></button>
+      <div class="progress" id="t1-prog" hidden><i></i></div>
+    </div></div>
+    <div class="task" id="t2"><span class="num">2</span><div>
+      <h3 data-i18n="kh.step.save"></h3>
+      <p class="small muted" data-i18n="kh.step.save.body"></p>
+      <div id="t2-form" class="form" hidden>
+        <label><span data-i18n="kh.passphrase"></span><input type="password" id="p1" autocomplete="new-password"></label>
+        <label><span data-i18n="kh.passphrase2"></span><input type="password" id="p2" autocomplete="new-password"></label>
+        <p class="err" id="t2-err" role="alert"></p>
+        <button type="button" class="primary" id="t2-go" data-i18n="kh.save"></button>
+      </div>
+    </div></div>
+    <div class="task" id="t3"><span class="num">3</span><div>
+      <h3 data-i18n="kh.step.backup"></h3>
+      <p class="small muted" data-i18n="kh.step.backup.body"></p>
+      <p class="small muted" id="t3-wait"></p>
+    </div></div>
+    <div class="task" id="t4"><span class="num">4</span><div>
+      <h3 data-i18n="kh.step.finish"></h3>
+      <p class="small muted" data-i18n="kh.step.finish.body"></p>
+      <p class="small muted" id="t4-wait"></p>
+    </div></div>
+    <p class="err" id="setup-err" role="alert"></p>
+  </section>
+
+  <section id="opening" class="card" hidden>
+    <h2 style="margin-top:0" data-i18n="kh.open.title"></h2>
+    <p class="muted" data-i18n="kh.open.body"></p>
+    <div id="o-run" hidden>
+      <button type="button" class="primary" id="o-go" data-i18n="kh.open.run"></button>
+      <div class="progress" id="o-prog" hidden><i></i></div>
+      <p class="small muted" id="o-msg"></p>
+    </div>
+    <p class="err" id="o-err" role="alert"></p>
+    <details style="margin-top:20px" id="absent" hidden>
+      <summary data-i18n="kh.absent.title"></summary>
+      <p class="small muted" data-i18n="kh.absent.body"></p>
+      <div class="form">
+        <label><span data-i18n="kh.absent.who"></span><select id="a-who"></select></label>
+        <div id="a-roles"></div>
+        <button type="button" id="a-go" data-i18n="kh.absent.go"></button>
+        <p class="small muted" id="a-msg"></p>
+      </div>
+    </details>
+  </section>
+
+  <section id="idle" class="card" hidden><p id="idle-msg" style="margin:0"></p></section>
+</main>
+<script src="assets/layout.js"></script>
+<script src="assets/i18n.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/keyvault.js"></script>
+<script src="assets/ceremony.js"></script>
+<script src="assets/holder.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/keyholder.js"></script>
+</body>
+</html>

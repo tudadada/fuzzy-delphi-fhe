@@ -1,4 +1,4 @@
-# Security analysis — Encrypted Fuzzy Delphi (v0.3–v0.4)
+# Security analysis — Encrypted Fuzzy Delphi (v0.3–v0.5)
 
 🇻🇳 [Bản tiếng Việt](SECURITY.vi.md)
 
@@ -131,3 +131,47 @@ Each expert keeps a receipt h_i = H(ct_i). The server publishes BB, the list of 
 - **Proved:** soundness of ballot validation (Theorem 1, with grinding bound) and verifiability against a cheating server (Theorem 2), under standard assumptions and correct committee decryption.
 - **Sketched:** ballot privacy, which requires noise flooding (G2) — **enabled from v0.4**.
 - **Open:** malformed ciphertexts (G1) and verifiable decryption (G3) are the most important remaining gaps.
+
+## 9. App layer (v0.5, branch `app-layer`) — what changes
+
+The web app keeps the v0.4 protocol and adds four application-level changes. They are **not yet reviewed**.
+
+### 9.1 Batched validity check (`fdfhe/batch.py`)
+
+Opening E · R validity checks costs each key holder E · R partial decryptions of about 640 KB. The server therefore first opens one ciphertext per repetition:
+
+  C_r = Σ_i w_{i,r} · c_{i,r},  where c_{i,r} is ballot i's v0.4 check and w_{i,r} ∈ Z_p^* comes from SHAKE-256 over the locked board, in a domain separate from the masks.
+
+Because the check is linear in its masks, w · check(ct, r₁, r₂) = check(ct, w·r₁, w·r₂). The weight is folded into the masks, so the batch adds no ciphertext multiplication and no noise.
+
+**Theorem 1′.** Let C be a non-empty set of invalid ballots on the board. Modelling the mask and weight expanders as independent random oracles,
+
+  Pr[C_r = 0 for all r] ≤ (2/(p − 1))^R.
+
+*Proof.* Fix r. Honest checks are exactly 0 (completeness), so C_r = Σ_{i∈C} w_{i,r} c_{i,r}. Either (a) every c_{i,r} with i ∈ C is 0, which for any single i ∈ C has probability ≤ 1/(p − 1) by Theorem 1, or (b) some slot k has c_{i,k} ≠ 0 for some i ∈ C. In case (b), C_{r,k} is a non-zero linear form in the weights, which are uniform on Z_p^* and independent of the c's, so it vanishes with probability ≤ 1/(p − 1). A union bound gives ≤ 2/(p − 1) per repetition. The repetitions use independent masks and weights. ∎
+
+For R = 5 this is ≈ 2^{−92.9} per attempt, and the grinding bound becomes Q · (2/(p − 1))^R. If any C_r ≠ 0, the server falls back to the v0.4 per-ballot checks (batch 2) and re-aggregates over the valid ballots (batch 3).
+
+**Leakage improves in the honest case.** When every ballot is valid, the committee learns one bit ("all valid") instead of one validity bit per ballot. In the fallback case the leakage is the same as v0.4.
+
+### 9.2 Key generation in the browser
+
+Key holders run the multiparty key generation in their own browser through openfhe-wasm, built from OpenFHE v1.6.1 with extra bindings (`wasm/fdfhe_extra_em.inc`): multiparty rotation keys, key-map serialization, EvalKey serialization. The chain order and key tags match `fdfhe/sim.py`. CI checks that wasm-made keys give exact results with the Python server.
+
+### 9.3 Application-level 2-of-3 backup (`web/assets/keyvault.js`)
+
+OpenFHE's `ShareKeys` output can't be serialized from Python or wasm. Instead, each holder splits the bytes of their serialized secret key with Shamir sharing over GF(256) (t = 2, n = 3). They seal share j to holder j's ECDH P-256 contact key, using an ephemeral key, HKDF-SHA256, and AES-256-GCM. To stand in for an absent holder, one present holder forwards their share (re-sealed) to the other, who rebuilds the key.
+
+This gives the same trust as `RecoverSharedKey`: any two holders can rebuild a third holder's key, and the rebuilt key is then exposed to the rebuilder (G6). Each holder's own key file is locked with PBKDF2-SHA256 (600,000 iterations) and AES-256-GCM.
+
+### 9.4 Fixed lead holder
+
+Holder 1's key always does the "lead" partial decryption, whether used by holder 1 or rebuilt by someone else. Exactly one lead share per ciphertext is needed, so this removes any coordination.
+
+### 9.5 New gaps
+
+| # | Gap | Effect | Path forward |
+|---|---|---|---|
+| G11 | Code delivery | Experts and holders trust the JavaScript and wasm the site serves. A malicious host could serve code that leaks answers or keys | Publish hashes of each release, use subresource integrity, allow self-hosting, and offer an offline holder tool |
+| G12 | Link tokens | Anyone with a link acts in that role. Tokens stay in the URL fragment, which is never sent to the server | Short-lived tokens, optional sign-in |
+| G13 | Batched check reviewed only here | Theorem 1′ is new | Independent review |

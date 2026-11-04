@@ -1,4 +1,4 @@
-# Phân tích an toàn — Encrypted Fuzzy Delphi (v0.3–v0.4)
+# Phân tích an toàn — Encrypted Fuzzy Delphi (v0.3–v0.5)
 
 🇬🇧 [English version](SECURITY.md)
 
@@ -131,3 +131,50 @@ Mỗi chuyên gia giữ biên nhận h_i = H(ct_i). Máy chủ công bố BB, da
 - **Đã chứng minh:** bước kiểm phiếu là đúng đắn (Định lý 1, kèm cận chống thử lại) và kiểm chứng được trước máy chủ gian lận (Định lý 2), dưới các giả định tiêu chuẩn và với điều kiện hội đồng giải mã đúng.
 - **Đã phác thảo:** giữ kín phiếu, đòi hỏi phủ nhiễu (G2), **đã bật từ v0.4**.
 - **Còn mở:** bản mã chế tạo sai (G1) và giải mã kiểm chứng được (G3) là hai khoảng trống quan trọng nhất.
+
+## 9. Lớp ứng dụng (v0.5, nhánh `app-layer`) — những gì thay đổi
+
+Ứng dụng web giữ nguyên giao thức v0.4 và thêm bốn thay đổi ở tầng ứng dụng. Các thay đổi này **chưa được thẩm định**.
+
+### 9.1 Kiểm phiếu theo lô (`fdfhe/batch.py`)
+
+Mở E · R bản mã kiểm phiếu buộc mỗi người giữ chìa làm E · R lần giải mã một phần, mỗi lần khoảng 640 KB. Vì vậy máy chủ mở trước một bản mã cho mỗi lần lặp:
+
+  C_r = Σ_i w_{i,r} · c_{i,r}, trong đó c_{i,r} là bản mã kiểm phiếu v0.4 của phiếu i, còn w_{i,r} ∈ Z_p^* sinh từ SHAKE-256 trên bảng tin đã khoá, ở một miền tách riêng với số che.
+
+Phép kiểm tuyến tính theo số che, nên w · check(ct, r₁, r₂) = check(ct, w·r₁, w·r₂). Trọng số được gộp vào số che, nên gộp theo lô không thêm phép nhân bản mã nào và không thêm nhiễu.
+
+**Định lý 1′.** Gọi C là tập khác rỗng các phiếu không hợp lệ trên bảng tin. Coi bộ sinh số che và bộ sinh trọng số là các random oracle độc lập. Khi đó
+
+  Pr[C_r = 0 với mọi r] ≤ (2/(p − 1))^R.
+
+*Chứng minh.* Cố định r. Phiếu hợp lệ cho kết quả kiểm đúng bằng 0 (tính đầy đủ), nên C_r = Σ_{i∈C} w_{i,r} c_{i,r}. Có hai trường hợp:
+(a) Mọi c_{i,r} với i ∈ C đều bằng 0. Theo Định lý 1, với bất kỳ i ∈ C nào, xác suất này ≤ 1/(p − 1).
+(b) Có ô k sao cho c_{i,k} ≠ 0 với một i ∈ C nào đó. Khi đó C_{r,k} là một dạng tuyến tính khác 0 theo các trọng số. Các trọng số phân bố đều trên Z_p^* và độc lập với các c, nên C_{r,k} bằng 0 với xác suất ≤ 1/(p − 1).
+Lấy cận hợp, mỗi lần lặp có xác suất ≤ 2/(p − 1). Các lần lặp dùng số che và trọng số độc lập. ∎
+
+Với R = 5, cận này xấp xỉ 2^{−92,9} cho mỗi lần thử, và cận chống thử lại trở thành Q · (2/(p − 1))^R. Nếu có C_r ≠ 0, máy chủ quay về kiểm từng phiếu như v0.4 (đợt 2), rồi gộp lại trên các phiếu hợp lệ (đợt 3).
+
+**Ít rò rỉ hơn khi mọi phiếu trung thực.** Khi mọi phiếu đều hợp lệ, hội đồng chỉ biết một bit ("tất cả hợp lệ"), thay vì một bit hợp lệ cho từng phiếu. Khi phải kiểm từng phiếu, mức rò rỉ giống v0.4.
+
+### 9.2 Tạo khoá trên trình duyệt
+
+Người giữ chìa tạo khoá nhiều bên ngay trên trình duyệt của mình bằng openfhe-wasm. Bản này được build từ OpenFHE v1.6.1 kèm các bindings bổ sung (`wasm/fdfhe_extra_em.inc`): khoá xoay nhiều bên, lưu và nạp bảng khoá, lưu và nạp EvalKey. Thứ tự chuỗi và nhãn khoá giống `fdfhe/sim.py`. CI kiểm tra rằng khoá tạo bằng WASM cho kết quả chính xác với máy chủ Python.
+
+### 9.3 Sao lưu 2-trong-3 ở tầng ứng dụng (`web/assets/keyvault.js`)
+
+Mảnh khoá do `ShareKeys` của OpenFHE tạo ra không lưu ra file được, cả từ Python lẫn WASM. Thay vào đó, mỗi người giữ chìa chia các byte của khoá bí mật đã lưu bằng chia sẻ bí mật Shamir trên GF(256) (t = 2, n = 3). Mảnh j được niêm phong cho khoá liên lạc ECDH P-256 của người j, dùng khoá tạm, HKDF-SHA256 và AES-256-GCM. Để làm thay một người vắng mặt, một người có mặt chuyển mảnh của mình (niêm phong lại) cho người kia, và người kia dựng lại khoá.
+
+Mức tin cậy giống `RecoverSharedKey`: bất kỳ hai người giữ chìa nào cũng dựng lại được khoá của người thứ ba, và khoá dựng lại sẽ lộ cho người dựng (G6). File khoá riêng của mỗi người được khoá bằng PBKDF2-SHA256 (600.000 vòng) và AES-256-GCM.
+
+### 9.4 Người dẫn cố định
+
+Khoá của người giữ chìa số 1 luôn làm phần giải mã "lead", dù người số 1 tự dùng hay khoá được người khác dựng lại. Mỗi bản mã chỉ cần đúng một phần lead, nên quy ước này giúp không cần phối hợp gì thêm.
+
+### 9.5 Khoảng trống mới
+
+| # | Khoảng trống | Hệ quả | Hướng xử lý |
+|---|---|---|---|
+| G11 | Cách phân phối code | Chuyên gia và người giữ chìa phải tin JavaScript và WASM do trang phục vụ. Bên host gian có thể phục vụ code làm lộ câu trả lời hoặc khoá | Công bố hash của mỗi bản phát hành, dùng subresource integrity, cho phép tự host, có công cụ offline cho người giữ chìa |
+| G12 | Token trong link | Ai có link thì hành động được với vai trò đó. Token nằm ở phần fragment của URL, không bao giờ gửi lên máy chủ | Token ngắn hạn, tuỳ chọn đăng nhập |
+| G13 | Kiểm phiếu theo lô mới chỉ được phân tích ở đây | Định lý 1′ là mới | Thẩm định độc lập |

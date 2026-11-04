@@ -2,9 +2,8 @@
 (async function () {
   const t = (k, v) => I18N.t(k, v);
   const $ = (id) => document.getElementById(id);
-  const params = new URLSearchParams(location.search);
-  const surveyUrl = params.get("survey") || "data/demo-survey.json";
-  const survey = await (await fetch(surveyUrl)).json();
+  const live = !!(Fd.sid && Fd.token);
+  const survey = live ? await Fd.api.survey(Fd.sid) : await (await fetch("data/demo-survey.json")).json();
   const K = survey.criteria.length;
   const answers = new Array(K).fill(null);
   let cur = 0;
@@ -83,19 +82,15 @@
       console.error(e); show("review"); stage("st-pick"); $("err2").textContent = t("vote.err.crypto"); return;
     }
     $("busy-text").textContent = t("vote.sending");
-    try {
-      if (survey.submitUrl && !BallotCrypto.demo) {
-        const token = params.get("invite") || "";
-        const res = await fetch(survey.submitUrl, {
-          method: "POST", body: bytes,
-          headers: { "content-type": "application/octet-stream", "x-invite": token },
-        });
-        if (!res.ok) throw new Error(res.status);
-      }
-    } catch (e) {
-      console.error(e); show("review"); stage("st-pick"); $("err2").textContent = t("vote.err.send"); return;
-    }
     const r = await BallotCrypto.receipt(bytes);
+    try {
+      if (live) await Fd.api.ballot(Fd.sid, bytes, r);
+    } catch (e) {
+      console.error(e); show("review"); stage("st-pick");
+      $("err2").textContent = t(e.status === 403 ? "vote.err.link" : e.status === 409
+        ? (/already/.test(e.message) ? "vote.err.used" : "vote.err.notopen") : "vote.err.send");
+      return;
+    }
     $("receipt").textContent = r.slice(0, 16).toUpperCase().match(/.{4}/g).join("-");
     $("receipt").title = r;
     show("sent"); stage("st-sent");
@@ -105,8 +100,24 @@
   };
 
   await I18N.init();
-  const real = await BallotCrypto.ready(survey);
-  $("demo-note").hidden = real;
+  $("demo-note").hidden = live;
   renderPick();
+  if (live) {
+    // check the invitation and the round, then load the lock while the expert reads
+    const gate = (key) => { show("busy"); $("busy-text").textContent = t(key); };
+    try {
+      const w = await Fd.api.whoami(Fd.sid);
+      if (w.role !== "expert") return gate("vote.err.link");
+    } catch (_) { return gate("vote.err.link"); }
+    if (survey.status !== "open") return gate("vote.err.notopen");
+    $("submit").disabled = true;
+    try {
+      const { m, ccBytes } = await Fd.wasm();
+      BallotCrypto.ready({ m, ccBytes, pkBytes: await Fd.api.get(Fd.sid, "keys/pk.bin") });
+    } catch (e) {
+      console.error(e); $("err2").textContent = t("vote.err.crypto");
+    }
+    $("submit").disabled = false;
+  }
   I18N.onChange(() => { if (!$("pick").hidden) renderPick(); if (!$("review").hidden) renderReview(); });
 })();

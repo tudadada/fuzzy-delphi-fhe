@@ -1,12 +1,11 @@
-// Ballot encryption interface used by vote.js.
-//   BallotCrypto.ready()            -> Promise<boolean>  real encryption available?
-//   BallotCrypto.encrypt(levels)    -> Promise<Uint8Array> serialized ciphertext
-//   BallotCrypto.receipt(bytes)     -> Promise<string>   SHA-256 hex (same as fdfhe.receipt)
-// The real implementation loads openfhe-wasm plus the survey's CryptoContext and public key.
-// Until that is wired in, demo mode returns random bytes so the flow can be tried end to end.
+// Ballot encryption used by vote.js.
+//   BallotCrypto.ready({m, ccBytes, pkBytes}) -> true when real encryption is available
+//   BallotCrypto.encrypt(levels)              -> Uint8Array serialized ciphertext
+//   BallotCrypto.receipt(bytes)               -> SHA-256 hex (same as fdfhe.receipt)
+// Without ready() (demo survey), encrypt() returns random bytes so the flow can be tried.
 const BallotCrypto = (() => {
   const LV = 5;
-  let wasm = null;
+  let w = null;
 
   function encode(levels) {
     const K = levels.length;
@@ -15,30 +14,22 @@ const BallotCrypto = (() => {
     return v;
   }
 
-  async function ready(survey) {
-    if (!survey || !survey.crypto) return false;          // demo survey: no keys published
-    try {
-      const factory = (await import(survey.crypto.module)).default;
-      const m = await factory();
-      const get = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
-      const BIN = m.SerType.BINARY;
-      const cc = m.DeserializeCryptoContextFromBuffer(await get(survey.crypto.context), BIN);
-      const pk = m.DeserializePublicKeyFromBuffer(await get(survey.crypto.publicKey), BIN);
-      wasm = { m, cc, pk, BIN };
-      return true;
-    } catch (e) {
-      console.error("wasm load failed", e);
-      return false;
-    }
+  function ready({ m, ccBytes, pkBytes }) {
+    const BIN = m.SerType.BINARY;
+    const cc = m.DeserializeCryptoContextFromBuffer(ccBytes, BIN);
+    const pk = m.DeserializePublicKeyFromBuffer(pkBytes, BIN);
+    if (!cc || !pk) throw new Error("could not load the survey's public key");
+    w = { m, cc, pk, BIN };
+    return true;
   }
 
   async function encrypt(levels) {
-    if (!wasm) {
+    if (!w) {
       const fake = new Uint8Array(64);
       crypto.getRandomValues(fake);
       return fake;
     }
-    const { m, cc, pk, BIN } = wasm;
+    const { m, cc, pk, BIN } = w;
     const pt = cc.MakePackedPlaintext(m.MakeVectorInt64Clipped(encode(levels)), 1, 0);
     return new Uint8Array(m.SerializeCiphertextToBuffer(cc.Encrypt(pk, pt), BIN));
   }
@@ -48,5 +39,5 @@ const BallotCrypto = (() => {
     return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  return { ready, encrypt, receipt, encode, get demo() { return !wasm; } };
+  return { ready, encrypt, receipt, encode, get demo() { return !w; } };
 })();

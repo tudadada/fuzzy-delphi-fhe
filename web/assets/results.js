@@ -2,12 +2,19 @@
 (async function () {
   const t = (k, v) => I18N.t(k, v);
   const $ = (id) => document.getElementById(id);
-  const params = new URLSearchParams(location.search);
-  const survey = await (await fetch(params.get("survey") || "data/demo-survey.json")).json();
+  // ?s=ID shows the latest published round of a real survey; without it, the demo data
+  const live = !!Fd.sid;
+  const survey = live ? await Fd.api.survey(Fd.sid) : await (await fetch("data/demo-survey.json")).json();
   let res = null;
   try {
-    const r = await fetch(params.get("results") || "data/demo-results.json");
-    if (r.ok) res = await r.json();
+    if (live) {
+      const round = survey.status === "published" ? survey.round : survey.round - 1;
+      if (round >= 1) res = await Fd.api.getJsonFile(Fd.sid, `rounds/${round}/results.json`);
+      if (res) survey.round = res.round;
+    } else {
+      const r = await fetch("data/demo-results.json");
+      if (r.ok) res = await r.json();
+    }
   } catch (_) {}
 
   const name = (c) => c[I18N.lang] || c.en;
