@@ -1,0 +1,10 @@
+{
+  "name": "private-delphi-worker",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "db:local": "wrangler d1 execute private-delphi --local --file=schema.sql",
+    "test": "node --test test/api.test.js"
+  },
+  "devDependencies": { "wrangler": "4.45.0" }
+}
